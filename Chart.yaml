@@ -1,0 +1,6 @@
+apiVersion: v2
+name: disaster-system
+description: A Helm chart for deploying the disaster recovery system components, including operator, server and web interface.
+type: application
+version: 2.0.0
+appVersion: "v2.0.0"

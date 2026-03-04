@@ -1,0 +1,950 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-controller-manager
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-leader-election-role
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-appbackup-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-appbackup-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-appbackup-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-apprestore-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-apprestore-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-apprestore-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - apprestores/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-backuppolicy-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-backuppolicy-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-backuppolicy-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - backuppolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-cluster-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-cluster-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-cluster-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - clusters/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterbackup-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterbackup-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterbackup-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterbackups/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterconfig-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterconfig-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterconfig-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterconfigs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterjob-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterjob-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterjob-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterjobs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterpolicy-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterpolicy-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-disasterpolicy-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - disasterpolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-operator-manager-role
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups
+  - apprestores
+  - backuppolicies
+  - backuprestorestatisticses
+  - clusters
+  - datasyncs
+  - disasterbackups
+  - disasterconfigs
+  - disasterdrills
+  - disastergroups
+  - disasterinstances
+  - disasterjobs
+  - disasteroperations
+  - disasterpolicies
+  - resourcesyncs
+  - storagerepositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups/finalizers
+  - apprestores/finalizers
+  - backuppolicies/finalizers
+  - clusters/finalizers
+  - datasyncs/finalizers
+  - disasterbackups/finalizers
+  - disasterconfigs/finalizers
+  - disasterdrills/finalizers
+  - disasterinstances/finalizers
+  - disasterjobs/finalizers
+  - disasteroperations/finalizers
+  - disasterpolicies/finalizers
+  - resourcesyncs/finalizers
+  - storagerepositories/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - appbackups/status
+  - apprestores/status
+  - backuppolicies/status
+  - backuprestorestatisticses/status
+  - clusters/status
+  - datasyncs/status
+  - disasterbackups/status
+  - disasterconfigs/status
+  - disasterdrills/status
+  - disastergroups/status
+  - disasterinstances/status
+  - disasterjobs/status
+  - disasteroperations/status
+  - disasterpolicies/status
+  - resourcesyncs/status
+  - storagerepositories/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - velero.io
+  resources:
+  - backups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-operator-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-storagerepository-admin-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories
+  verbs:
+  - '*'
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-storagerepository-editor-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-storagerepository-viewer-role
+rules:
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - disaster.wuxs.vip
+  resources:
+  - storagerepositories/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-leader-election-rolebinding
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: disaster-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: disaster-operator-controller-manager
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+  name: disaster-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: disaster-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: disaster-operator-controller-manager
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: disaster-operator-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: disaster-operator-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: disaster-operator-controller-manager
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+    control-plane: controller-manager
+  name: disaster-operator-controller-manager-metrics-service
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app.kubernetes.io/name: disaster-operator
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: disaster-operator
+    control-plane: controller-manager
+  name: disaster-operator-controller-manager
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: disaster-operator
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/name: disaster-operator
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        command:
+        - /app/manager
+        env:
+        - name: TZ
+          value: Asia/Shanghai
+        image: {{ .Values.images.operator.repository }}:{{ .Values.images.operator.tag
+          }}
+        imagePullPolicy: {{ .Values.images.operator.pullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports: []
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        volumeMounts: []
+      serviceAccountName: disaster-operator-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes: []

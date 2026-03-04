@@ -1,0 +1,31 @@
+global:
+  namespace: disaster-system
+
+# 项目镜像统一配置
+images:
+  operator:
+    repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-operator
+    tag: v2.0.0
+    pullPolicy: Always
+  server:
+    repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-server
+    tag: v2.0.0
+    pullPolicy: Always
+  web:
+    repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-web
+    tag: v2.0.0
+    pullPolicy: Always
+
+# Web 端专有配置
+web:
+  backendUrl: "http://192.168.120.140:8080"
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30087
+
+# Server 端专有配置
+server:
+  service:
+    type: NodePort
+    port: 8081
