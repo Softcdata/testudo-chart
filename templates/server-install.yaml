@@ -98,9 +98,6 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
-      {{- if eq .Values.server.service.type "NodePort" }}
-      nodePort: {{ .Values.server.service.nodePort }}
-      {{- end }}
   selector: 
     app.kubernetes.io/name: disaster-server
     app.kubernetes.io/instance: disaster-server
@@ -143,7 +140,7 @@ spec:
           imagePullPolicy: {{ .Values.images.server.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8081
+              containerPort: {{ .Values.server.service.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
