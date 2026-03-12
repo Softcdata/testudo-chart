@@ -11,6 +11,19 @@ server_out = "/home/chenxi/YS/disaster-system-chart/templates/server-install.yam
 namespace_tmpl = '{{ .Values.global.namespace | default "disaster-system" }}'
 operator_image_tmpl = '{{ .Values.images.operator.repository }}:{{ .Values.images.operator.tag }}'
 server_image_tmpl = '{{ .Values.images.server.repository }}:{{ .Values.images.server.tag }}'
+image_pull_secrets_block = """      imagePullSecrets:
+        - name: default-secret
+"""
+operator_strategy_block = """  {{- with .Values.operator.strategy }}
+  strategy:
+{{- toYaml . | nindent 4 }}
+  {{- end }}
+"""
+server_strategy_block = """  {{- with .Values.server.strategy }}
+  strategy:
+{{- toYaml . | nindent 4 }}
+  {{- end }}
+"""
 
 def process_operator():
     with open(operator_in, "r", encoding="utf-8") as f:
@@ -58,6 +71,16 @@ def process_operator():
     with open(operator_out, "r", encoding="utf-8") as f:
         text = f.read()
     text = text.replace("'{{", "{{").replace("}}'", "}}")
+    text = text.replace(
+        "spec:\n  replicas: 1\n  selector:\n",
+        "spec:\n  replicas: 1\n" + operator_strategy_block + "  selector:\n",
+        1,
+    )
+    text = text.replace(
+        "    spec:\n      containers:\n",
+        "    spec:\n" + image_pull_secrets_block + "      containers:\n",
+        1,
+    )
     with open(operator_out, "w", encoding="utf-8") as f:
         f.write(text)
 
@@ -78,6 +101,16 @@ def process_server():
     # Service port logic
     text = re.sub(r'type:\s*NodePort', 'type: {{ .Values.server.service.type }}', text)
     text = re.sub(r'port:\s*8081', 'port: {{ .Values.server.service.port }}', text)
+    text = text.replace(
+        "spec:\n  replicas: 1\n  selector:\n",
+        "spec:\n  replicas: 1\n" + server_strategy_block + "  selector:\n",
+        1,
+    )
+    text = text.replace(
+        "      imagePullSecrets:\n        - name: default-secret\n",
+        image_pull_secrets_block,
+        1,
+    )
     
     with open(server_out, "w", encoding="utf-8") as f:
         f.write(text)

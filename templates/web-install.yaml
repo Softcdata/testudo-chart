@@ -5,6 +5,10 @@ metadata:
   namespace: {{ .Values.global.namespace | default "disaster-system" }}
 spec:
   replicas: 1
+  {{- with .Values.web.strategy }}
+  strategy:
+{{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       app: disaster-web
@@ -13,6 +17,8 @@ spec:
       labels:
         app: disaster-web
     spec:
+      imagePullSecrets:
+        - name: default-secret
       containers:
         - name: web
           image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"

@@ -2932,6 +2932,9 @@ spec:
           spec:
             description: DisasterDrillSpec 定义演练规格
             properties:
+              cleanup:
+                description: CleanUp 触发演练资源清理
+                type: boolean
               confirmed:
                 description: Confirmed 用户确认开始执行 (Ready -> Executing)
                 type: boolean
@@ -3051,6 +3054,8 @@ spec:
                 - Ready
                 - Executing
                 - Completed
+                - CleaningUp
+                - CleanedUp
                 - Failed
                 type: string
               steps:
@@ -3763,6 +3768,7 @@ spec:
                 - undo
                 - cancel
                 - drill
+                - drill-cleanup
                 type: string
               retryPolicy:
                 description: RetryPolicy 重试策略
@@ -3780,6 +3786,11 @@ spec:
                 type: object
               skipFinalSync:
                 description: SkipFinalSync 是否跳过故障切换中的最终同步步骤
+                type: boolean
+              skipScaleDownSource:
+                description: |-
+                  SkipScaleDownSource 是否跳过故障切换中的源集群缩零步骤
+                  仅对 operationType=failover 生效
                 type: boolean
               timeoutMinutes:
                 description: |-
@@ -4390,6 +4401,10 @@ spec:
                 type: string
               endpoint:
                 type: string
+              quotaBytes:
+                description: QuotaBytes defines the storage limit
+                format: int64
+                type: integer
               region:
                 type: string
               secretKey:
@@ -4439,6 +4454,16 @@ spec:
                 type: string
               status:
                 type: string
+              totalBackupCount:
+                description: TotalBackupCount records the physical backup objects
+                  count inside S3 based on backups/ prefix
+                format: int64
+                type: integer
+              usedSpaceBytes:
+                description: UsedSpaceBytes records the total bytes used by backup
+                  objects in the storage repository
+                format: int64
+                type: integer
             required:
             - status
             type: object
