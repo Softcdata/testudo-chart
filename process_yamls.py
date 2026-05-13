@@ -12,6 +12,7 @@ operator_crds_out = "/home/chenxi/YS/disaster-system-chart/crds/operator-crds.ya
 server_out = "/home/chenxi/YS/disaster-system-chart/templates/server-install.yaml"
 
 namespace_tmpl = '{{ .Values.global.namespace | default "disaster-system" }}'
+timezone_tmpl = '{{ .Values.global.timezone | default "Asia/Shanghai" | quote }}'
 operator_image_tmpl = '{{ .Values.images.operator.repository }}:{{ .Values.images.operator.tag }}'
 server_image_tmpl = '{{ .Values.images.server.repository }}:{{ .Values.images.server.tag }}'
 image_pull_secrets_block = """      imagePullSecrets:
@@ -126,6 +127,17 @@ def write_raw_yaml_documents(path, doc_texts):
             return
         f.write("\n---\n".join(doc.rstrip("\n") for doc in normalized_docs) + "\n")
 
+
+def template_timezone_env(text, component):
+    updated, count = re.subn(
+        r"(?m)^(\s*-\s*name:\s*TZ\s*\n\s*value:\s*).+$",
+        r"\1" + timezone_tmpl,
+        text,
+    )
+    if count == 0:
+        raise RuntimeError(f"{component} installer is missing TZ environment variable")
+    return updated
+
 def process_operator():
     ensure_operator_install_is_fresh()
     yaml = load_yaml_module()
@@ -186,6 +198,7 @@ def process_operator():
     with open(operator_out, "r", encoding="utf-8") as f:
         text = f.read()
     text = text.replace("'{{", "{{").replace("}}'", "}}")
+    text = template_timezone_env(text, "operator")
     text = text.replace(
         "spec:\n  replicas: 1\n  selector:\n",
         "spec:\n  replicas: 1\n" + operator_strategy_block + "  selector:\n",
@@ -227,6 +240,7 @@ def process_server():
         image_pull_secrets_block,
         1,
     )
+    text = template_timezone_env(text, "server")
     
     with open(server_out, "w", encoding="utf-8") as f:
         f.write(text)

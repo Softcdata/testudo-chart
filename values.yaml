@@ -1,5 +1,6 @@
 global:
   namespace: disaster-system
+  timezone: Asia/Shanghai
 
 # 镜像拉取 Secret 配置。Chart 会固定创建并引用名为 default-secret 的 Secret
 imagePullSecret:

@@ -37,6 +37,7 @@ chmod 700 get_helm.sh
 ### `global`
 
 - `global.namespace`: 写入资源 `metadata.namespace` 的命名空间，默认值为 `disaster-system`
+- `global.timezone`: 写入 `disaster-operator` 和 `disaster-server` 容器环境变量 `TZ`，默认值为 `Asia/Shanghai`
 
 注意：本 Chart 的资源命名空间来自 `global.namespace`，不是自动跟随 `helm install -n ...`。如果你安装到其他命名空间，例如 `demo`，请同时设置：
 

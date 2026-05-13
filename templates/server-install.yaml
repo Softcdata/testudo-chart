@@ -143,7 +143,7 @@ spec:
         - name: disaster-server
           env:
             - name: TZ
-              value: Asia/Shanghai
+              value: {{ .Values.global.timezone | default "Asia/Shanghai" | quote }}
           image: "{{ .Values.images.server.repository }}:{{ .Values.images.server.tag }}"
           imagePullPolicy: {{ .Values.images.server.pullPolicy }}
           ports:

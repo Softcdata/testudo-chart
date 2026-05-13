@@ -925,7 +925,7 @@ spec:
         - /app/manager
         env:
         - name: TZ
-          value: Asia/Shanghai
+          value: {{ .Values.global.timezone | default "Asia/Shanghai" | quote }}
         image: {{ .Values.images.operator.repository }}:{{ .Values.images.operator.tag
           }}
         imagePullPolicy: {{ .Values.images.operator.pullPolicy }}
