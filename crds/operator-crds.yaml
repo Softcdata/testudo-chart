@@ -2193,11 +2193,56 @@ spec:
             properties:
               endpoint:
                 type: string
+              imageSources:
+                description: ImageSources defines reusable registry aliases for this
+                  cluster.
+                items:
+                  description: |-
+                    ImageSource defines an available image registry source on a cluster.
+                    It is referenced by DisasterInstance image rewrite mappings.
+                  properties:
+                    name:
+                      description: Name is a readable alias and must be unique within
+                        one Cluster.
+                      type: string
+                    registry:
+                      description: Registry is the registry host/prefix, e.g. harbor.prod.local.
+                      type: string
+                  required:
+                  - name
+                  - registry
+                  type: object
+                type: array
               kubeConfig:
                 format: byte
                 type: string
               token:
                 type: string
+              veleroInstall:
+                description: VeleroInstall defines Velero install-specific image registry
+                  settings.
+                properties:
+                  imageRegistry:
+                    description: |-
+                      ImageRegistry is the registry/repository prefix used for Velero install images.
+                      Example: harbor.customer.local/disaster
+                    type: string
+                  registryCredentialSecretRef:
+                    description: RegistryCredentialSecretRef references the management-plane
+                      dockerconfigjson Secret.
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
             type: object
           status:
             description: status defines the observed state of Cluster
@@ -2218,13 +2263,14 @@ spec:
               message:
                 type: string
               namespaceCount:
-                description: NamespaceCount is the total number of namespaces in the
-                  cluster
+                description: NamespaceCount is the number of non-system namespaces
+                  tracked by the cluster backup statistics.
                 type: integer
               namespaceStats:
                 additionalProperties:
                   type: integer
-                description: NamespaceStats records the resource count per namespace
+                description: NamespaceStats records the backup-scope resource count
+                  per tracked namespace.
                 type: object
               nodeCount:
                 type: integer
@@ -2243,8 +2289,8 @@ spec:
               reason:
                 type: string
               resourceTotalCount:
-                description: ResourceTotalCount is the total number of resources in
-                  the cluster
+                description: ResourceTotalCount is the total number of namespace-scoped
+                  backup-scope resources across tracked namespaces.
                 type: integer
               status:
                 type: string
@@ -2255,6 +2301,22 @@ spec:
                 type: string
               veleroVersion:
                 type: string
+              workloadNamespaceCount:
+                description: WorkloadNamespaceCount is the number of namespaces that
+                  contain running Deployment/StatefulSet workloads
+                type: integer
+              workloadNamespaceStats:
+                additionalProperties:
+                  type: integer
+                description: WorkloadNamespaceStats records the backup-scope resource
+                  count per tracked namespace for namespaces that contain running
+                  Deployment/StatefulSet workloads.
+                type: object
+              workloadTotalCount:
+                description: WorkloadTotalCount is the total number of namespace-scoped
+                  backup-scope resources across tracked namespaces that contain running
+                  Deployment/StatefulSet workloads.
+                type: integer
             required:
             - endpoint
             - k8sVersion
@@ -2473,6 +2535,12 @@ spec:
               lastSyncTime:
                 description: LastSyncTime 上次同步时间
                 format: date-time
+                type: string
+              message:
+                description: Message 人类可读错误描述
+                type: string
+              reason:
+                description: Reason 机器可读错误码
                 type: string
               state:
                 description: State 当前同步状态
@@ -2826,6 +2894,51 @@ spec:
                   DataSyncType specifies the data synchronization type
                   Options: "fsb" (File System Backup), "snapshot", "none", "external"
                 type: string
+              imageRewrite:
+                description: ImageRewrite defines image source mapping strategy for
+                  restore workflows.
+                properties:
+                  applyTo:
+                    description: |-
+                      ApplyTo controls which restore paths apply image rewrite.
+                      Supported values: resourceSync, drill.
+                    items:
+                      description: ImageRewriteApplyTarget defines where image rewrite
+                        rules should take effect.
+                      type: string
+                    type: array
+                  enabled:
+                    description: Enabled toggles image rewrite behavior.
+                    type: boolean
+                  mappings:
+                    description: Mappings defines source image source alias -> target
+                      image source alias rules.
+                    items:
+                      description: ImageSourceMapping defines source->target image
+                        source alias mapping.
+                      properties:
+                        sourceImageSource:
+                          description: SourceImageSource references Cluster.spec.imageSources[].name
+                            on source cluster.
+                          type: string
+                        targetImageSource:
+                          description: TargetImageSource references Cluster.spec.imageSources[].name
+                            on target cluster.
+                          type: string
+                      required:
+                      - sourceImageSource
+                      - targetImageSource
+                      type: object
+                    type: array
+                  unmatchedPolicy:
+                    description: |-
+                      UnmatchedPolicy controls behavior when image is not matched by any mapping.
+                      Supported values: Fail, Keep. Default is Fail.
+                    enum:
+                    - Fail
+                    - Keep
+                    type: string
+                type: object
               resourceSyncPolicy:
                 description: |-
                   ResourceSyncPolicy is the name of the DisasterPolicy for resource synchronization
@@ -2857,6 +2970,8 @@ spec:
           status:
             description: status defines the observed state of DisasterConfig
             properties:
+              message:
+                type: string
               reason:
                 type: string
               status:
@@ -2951,6 +3066,656 @@ spec:
                   NamespaceMapping 命名空间映射 (可选，不指定则使用原始命名空间)
                   格式: 源命名空间 -> 目标命名空间
                 type: object
+              restorePolicy:
+                description: |-
+                  RestorePolicy 演练级 restorePolicy 覆盖配置。
+                  未提供时，默认继承 DisasterInstance 的 restorePolicy；
+                  提供时，演练链路会优先使用该配置中的资源定制化/bulk 修改等策略。
+                properties:
+                  bulkModifierActions:
+                    description: BulkModifierActions defines instance-level bulk modifier
+                      intent.
+                    items:
+                      description: BulkModifierAction defines instance-level bulk
+                        modifier input.
+                      properties:
+                        action:
+                          description: |-
+                            Action controls bulk expansion behavior.
+                            Supported values: replaceExactValue, removeKey.
+                          enum:
+                          - replaceExactValue
+                          - removeKey
+                          type: string
+                        applyTo:
+                          description: ApplyTo scopes action to resourceSync/drill
+                            restore paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        directionPolicy:
+                          description: DirectionPolicy controls generated rule direction
+                            semantics.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether action participates in
+                            snapshot generation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing action id for diagnostics
+                            and deterministic rule IDs.
+                          type: string
+                        key:
+                          description: Key is required when action=removeKey.
+                          type: string
+                        sourceValue:
+                          description: SourceValue is required when action=replaceExactValue.
+                          type: string
+                        targetValue:
+                          description: TargetValue is required when action=replaceExactValue.
+                          type: string
+                      required:
+                      - action
+                      type: object
+                    type: array
+                  execution:
+                    description: Execution controls restore execution behavior.
+                    properties:
+                      existingResourcePolicy:
+                        description: |-
+                          ExistingResourcePolicy controls how to handle existing resources.
+                          Supported values: none, update.
+                        enum:
+                        - none
+                        - update
+                        - None
+                        - Update
+                        type: string
+                      itemOperationTimeout:
+                        description: ItemOperationTimeout configures velero restore
+                          item operation timeout.
+                        type: string
+                      restorePVs:
+                        description: RestorePVs controls whether to restore PersistentVolumes.
+                        type: boolean
+                    type: object
+                  ingressClassMapping:
+                    description: IngressClassMapping defines IngressClass mapping
+                      behavior.
+                    properties:
+                      mappings:
+                        description: Mappings defines source->target mapping rules.
+                        items:
+                          description: RestoreClassMapping defines source->target
+                            class mapping for restore.
+                          properties:
+                            namespaces:
+                              description: Namespaces optionally scopes this mapping
+                                to specific namespaces.
+                              items:
+                                type: string
+                              type: array
+                            sourceClass:
+                              description: SourceClass is the class name in source
+                                cluster.
+                              type: string
+                            targetClass:
+                              description: TargetClass is the class name to use in
+                                target cluster.
+                              type: string
+                          required:
+                          - sourceClass
+                          - targetClass
+                          type: object
+                        type: array
+                      strictTargetValidation:
+                        description: StrictTargetValidation checks whether target
+                          classes exist before restore starts.
+                        type: boolean
+                      unmatchedPolicy:
+                        description: |-
+                          UnmatchedPolicy controls behavior when mapping is not matched.
+                          Supported values: Keep, Fail. Default is Keep.
+                        enum:
+                        - Keep
+                        - Fail
+                        type: string
+                    type: object
+                  modifierRuleSnapshot:
+                    description: ModifierRuleSnapshot defines server-generated final
+                      executable modifier rule set.
+                    items:
+                      description: RestoreModifierRule defines unified modifier DSL
+                        rule.
+                      properties:
+                        applyTo:
+                          description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                            paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        conditions:
+                          description: Conditions reuses Velero condition structure.
+                          properties:
+                            groupResource:
+                              description: GroupResource is the group and resource
+                                to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                              type: string
+                            labelSelector:
+                              description: LabelSelector is a label selector to match
+                                resources.
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            namespaces:
+                              description: Namespaces is a list of namespaces to match.
+                              items:
+                                type: string
+                              type: array
+                            resourceNameRegex:
+                              description: ResourceNameRegex is a regular expression
+                                to match the resource name.
+                              type: string
+                          required:
+                          - groupResource
+                          type: object
+                        directionPolicy:
+                          description: DirectionPolicy gates rule by resolved flow.
+                            Default Auto.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether rule participates in
+                            compilation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing rule id for diagnostics.
+                          type: string
+                        mode:
+                          description: |-
+                            Mode controls compilation behavior.
+                            Supported values: veleroNative, reversible.
+                          enum:
+                          - veleroNative
+                          - reversible
+                          type: string
+                        onConflict:
+                          description: OnConflict controls same-priority same-key
+                            conflict handling. Default Fail.
+                          enum:
+                          - Fail
+                          - Skip
+                          type: string
+                        pair:
+                          description: |-
+                            Pair is required when mode=reversible.
+                            Pair values may contain restricted placeholders.
+                          properties:
+                            path:
+                              description: Path is JSON Pointer target path.
+                              minLength: 1
+                              type: string
+                            sourceValue:
+                              description: |-
+                                SourceValue is the value for the baseline source side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                            targetValue:
+                              description: |-
+                                TargetValue is the value for the baseline target side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          - sourceValue
+                          - targetValue
+                          type: object
+                        priority:
+                          description: Priority decides conflict precedence, larger
+                            wins.
+                          format: int32
+                          type: integer
+                        veleroRule:
+                          description: VeleroRule is required when mode=veleroNative.
+                          properties:
+                            mergePatches:
+                              description: MergePatches is reserved for Phase 2.
+                              items:
+                                type: string
+                              type: array
+                            patches:
+                              description: Patches is Velero JSONPatch list (Phase
+                                1 supported).
+                              items:
+                                description: JSONPatch defines a JSON patch operation.
+                                properties:
+                                  from:
+                                    description: From is the source path (for "move"
+                                      or "copy" operations).
+                                    type: string
+                                  operation:
+                                    description: Operation is the type of JSON patch
+                                      operation (e.g., "replace", "add", "remove").
+                                    type: string
+                                  path:
+                                    description: Path is the JSON path to the field
+                                      to modify.
+                                    type: string
+                                  value:
+                                    description: Value is the value to set (for "replace"
+                                      or "add" operations).
+                                    type: string
+                                required:
+                                - operation
+                                - path
+                                type: object
+                              type: array
+                            strategicPatches:
+                              description: StrategicPatches is reserved for Phase
+                                2.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                      required:
+                      - conditions
+                      - mode
+                      type: object
+                    type: array
+                  modifierRuleSnapshotHash:
+                    description: ModifierRuleSnapshotHash is SHA256 over final modifierRuleSnapshot
+                      JSON.
+                    type: string
+                  modifierRules:
+                    description: ModifierRules defines unified reversible/veleroNative
+                      rule set.
+                    items:
+                      description: RestoreModifierRule defines unified modifier DSL
+                        rule.
+                      properties:
+                        applyTo:
+                          description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                            paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        conditions:
+                          description: Conditions reuses Velero condition structure.
+                          properties:
+                            groupResource:
+                              description: GroupResource is the group and resource
+                                to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                              type: string
+                            labelSelector:
+                              description: LabelSelector is a label selector to match
+                                resources.
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            namespaces:
+                              description: Namespaces is a list of namespaces to match.
+                              items:
+                                type: string
+                              type: array
+                            resourceNameRegex:
+                              description: ResourceNameRegex is a regular expression
+                                to match the resource name.
+                              type: string
+                          required:
+                          - groupResource
+                          type: object
+                        directionPolicy:
+                          description: DirectionPolicy gates rule by resolved flow.
+                            Default Auto.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether rule participates in
+                            compilation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing rule id for diagnostics.
+                          type: string
+                        mode:
+                          description: |-
+                            Mode controls compilation behavior.
+                            Supported values: veleroNative, reversible.
+                          enum:
+                          - veleroNative
+                          - reversible
+                          type: string
+                        onConflict:
+                          description: OnConflict controls same-priority same-key
+                            conflict handling. Default Fail.
+                          enum:
+                          - Fail
+                          - Skip
+                          type: string
+                        pair:
+                          description: |-
+                            Pair is required when mode=reversible.
+                            Pair values may contain restricted placeholders.
+                          properties:
+                            path:
+                              description: Path is JSON Pointer target path.
+                              minLength: 1
+                              type: string
+                            sourceValue:
+                              description: |-
+                                SourceValue is the value for the baseline source side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                            targetValue:
+                              description: |-
+                                TargetValue is the value for the baseline target side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          - sourceValue
+                          - targetValue
+                          type: object
+                        priority:
+                          description: Priority decides conflict precedence, larger
+                            wins.
+                          format: int32
+                          type: integer
+                        veleroRule:
+                          description: VeleroRule is required when mode=veleroNative.
+                          properties:
+                            mergePatches:
+                              description: MergePatches is reserved for Phase 2.
+                              items:
+                                type: string
+                              type: array
+                            patches:
+                              description: Patches is Velero JSONPatch list (Phase
+                                1 supported).
+                              items:
+                                description: JSONPatch defines a JSON patch operation.
+                                properties:
+                                  from:
+                                    description: From is the source path (for "move"
+                                      or "copy" operations).
+                                    type: string
+                                  operation:
+                                    description: Operation is the type of JSON patch
+                                      operation (e.g., "replace", "add", "remove").
+                                    type: string
+                                  path:
+                                    description: Path is the JSON path to the field
+                                      to modify.
+                                    type: string
+                                  value:
+                                    description: Value is the value to set (for "replace"
+                                      or "add" operations).
+                                    type: string
+                                required:
+                                - operation
+                                - path
+                                type: object
+                              type: array
+                            strategicPatches:
+                              description: StrategicPatches is reserved for Phase
+                                2.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                      required:
+                      - conditions
+                      - mode
+                      type: object
+                    type: array
+                  resourceSelection:
+                    description: ResourceSelection controls restore include/exclude
+                      scope.
+                    properties:
+                      excludedClusterScopedResources:
+                        description: ExcludedClusterScopedResources specifies cluster-scoped
+                          resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedNamespaceScopedResources:
+                        description: ExcludedNamespaceScopedResources specifies namespace-scoped
+                          resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedNamespaces:
+                        description: ExcludedNamespaces specifies namespaces to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedResources:
+                        description: ExcludedResources specifies resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      includeClusterResources:
+                        description: IncludeClusterResources controls whether cluster-scoped
+                          resources are included.
+                        type: boolean
+                      includedClusterScopedResources:
+                        description: IncludedClusterScopedResources specifies cluster-scoped
+                          resources to include.
+                        items:
+                          type: string
+                        type: array
+                      includedNamespaceScopedResources:
+                        description: IncludedNamespaceScopedResources specifies namespace-scoped
+                          resources to include.
+                        items:
+                          type: string
+                        type: array
+                      includedNamespaces:
+                        description: IncludedNamespaces specifies namespaces to include.
+                        items:
+                          type: string
+                        type: array
+                      includedResources:
+                        description: IncludedResources specifies resources to include.
+                        items:
+                          type: string
+                        type: array
+                      labelSelector:
+                        description: LabelSelector filters resources by labels.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  storageClassMapping:
+                    description: StorageClassMapping defines StorageClass mapping
+                      behavior.
+                    properties:
+                      mappings:
+                        description: Mappings defines source->target mapping rules.
+                        items:
+                          description: RestoreClassMapping defines source->target
+                            class mapping for restore.
+                          properties:
+                            namespaces:
+                              description: Namespaces optionally scopes this mapping
+                                to specific namespaces.
+                              items:
+                                type: string
+                              type: array
+                            sourceClass:
+                              description: SourceClass is the class name in source
+                                cluster.
+                              type: string
+                            targetClass:
+                              description: TargetClass is the class name to use in
+                                target cluster.
+                              type: string
+                          required:
+                          - sourceClass
+                          - targetClass
+                          type: object
+                        type: array
+                      strictTargetValidation:
+                        description: StrictTargetValidation checks whether target
+                          classes exist before restore starts.
+                        type: boolean
+                      unmatchedPolicy:
+                        description: |-
+                          UnmatchedPolicy controls behavior when mapping is not matched.
+                          Supported values: Keep, Fail. Default is Keep.
+                        enum:
+                        - Keep
+                        - Fail
+                        type: string
+                    type: object
+                  useUnifiedDirectionResolver:
+                    description: |-
+                      UseUnifiedDirectionResolver toggles unified direction resolver + DSL compiler.
+                      Default false in Phase 1 for smooth migration.
+                    type: boolean
+                type: object
               skipValidation:
                 description: SkipValidation 跳过前置校验
                 type: boolean
@@ -3033,6 +3798,9 @@ spec:
               readyTime:
                 description: ReadyTime 校验完成时间
                 format: date-time
+                type: string
+              reason:
+                description: Reason 机器可读错误码
                 type: string
               restoreMode:
                 description: RestoreMode 恢复模式
@@ -3272,9 +4040,15 @@ spec:
                   - type
                   type: object
                 type: array
+              message:
+                description: Message 人类可读错误描述
+                type: string
               readyInstances:
                 description: ReadyInstances 处于 Protected 状态的实例数
                 type: integer
+              reason:
+                description: Reason 机器可读错误码
+                type: string
               totalInstances:
                 description: TotalInstances 组内实例总数
                 type: integer
@@ -3348,6 +4122,11 @@ spec:
               config:
                 description: Config 关联的 DisasterConfig 名称
                 type: string
+              dataSyncPolicy:
+                description: |-
+                  DataSyncPolicy 定义实例级数据同步策略 override。
+                  为空时继承关联 DisasterConfig.spec.dataSyncPolicy。
+                type: string
               labelSelector:
                 description: LabelSelector 用于选择需要保护的资源
                 properties:
@@ -3412,6 +4191,667 @@ spec:
                   PodRestoreMethod 指定 Standby 模式下的 Pod 处理方式
                   可选值: "replica" (默认), "initContainer"
                 type: string
+              resourceSyncPolicy:
+                description: |-
+                  ResourceSyncPolicy 定义实例级资源同步策略 override。
+                  为空时继承关联 DisasterConfig.spec.resourceSyncPolicy。
+                type: string
+              restorePolicy:
+                description: |-
+                  RestorePolicy 定义实例级恢复策略。
+                  DataSync/ResourceSync/Drill 在构建 AppRestore 时会应用该策略。
+                properties:
+                  bulkModifierActions:
+                    description: BulkModifierActions defines instance-level bulk modifier
+                      intent.
+                    items:
+                      description: BulkModifierAction defines instance-level bulk
+                        modifier input.
+                      properties:
+                        action:
+                          description: |-
+                            Action controls bulk expansion behavior.
+                            Supported values: replaceExactValue, removeKey.
+                          enum:
+                          - replaceExactValue
+                          - removeKey
+                          type: string
+                        applyTo:
+                          description: ApplyTo scopes action to resourceSync/drill
+                            restore paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        directionPolicy:
+                          description: DirectionPolicy controls generated rule direction
+                            semantics.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether action participates in
+                            snapshot generation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing action id for diagnostics
+                            and deterministic rule IDs.
+                          type: string
+                        key:
+                          description: Key is required when action=removeKey.
+                          type: string
+                        sourceValue:
+                          description: SourceValue is required when action=replaceExactValue.
+                          type: string
+                        targetValue:
+                          description: TargetValue is required when action=replaceExactValue.
+                          type: string
+                      required:
+                      - action
+                      type: object
+                    type: array
+                  execution:
+                    description: Execution controls restore execution behavior.
+                    properties:
+                      existingResourcePolicy:
+                        description: |-
+                          ExistingResourcePolicy controls how to handle existing resources.
+                          Supported values: none, update.
+                        enum:
+                        - none
+                        - update
+                        - None
+                        - Update
+                        type: string
+                      itemOperationTimeout:
+                        description: ItemOperationTimeout configures velero restore
+                          item operation timeout.
+                        type: string
+                      restorePVs:
+                        description: RestorePVs controls whether to restore PersistentVolumes.
+                        type: boolean
+                    type: object
+                  ingressClassMapping:
+                    description: IngressClassMapping defines IngressClass mapping
+                      behavior.
+                    properties:
+                      mappings:
+                        description: Mappings defines source->target mapping rules.
+                        items:
+                          description: RestoreClassMapping defines source->target
+                            class mapping for restore.
+                          properties:
+                            namespaces:
+                              description: Namespaces optionally scopes this mapping
+                                to specific namespaces.
+                              items:
+                                type: string
+                              type: array
+                            sourceClass:
+                              description: SourceClass is the class name in source
+                                cluster.
+                              type: string
+                            targetClass:
+                              description: TargetClass is the class name to use in
+                                target cluster.
+                              type: string
+                          required:
+                          - sourceClass
+                          - targetClass
+                          type: object
+                        type: array
+                      strictTargetValidation:
+                        description: StrictTargetValidation checks whether target
+                          classes exist before restore starts.
+                        type: boolean
+                      unmatchedPolicy:
+                        description: |-
+                          UnmatchedPolicy controls behavior when mapping is not matched.
+                          Supported values: Keep, Fail. Default is Keep.
+                        enum:
+                        - Keep
+                        - Fail
+                        type: string
+                    type: object
+                  modifierRuleSnapshot:
+                    description: ModifierRuleSnapshot defines server-generated final
+                      executable modifier rule set.
+                    items:
+                      description: RestoreModifierRule defines unified modifier DSL
+                        rule.
+                      properties:
+                        applyTo:
+                          description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                            paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        conditions:
+                          description: Conditions reuses Velero condition structure.
+                          properties:
+                            groupResource:
+                              description: GroupResource is the group and resource
+                                to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                              type: string
+                            labelSelector:
+                              description: LabelSelector is a label selector to match
+                                resources.
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            namespaces:
+                              description: Namespaces is a list of namespaces to match.
+                              items:
+                                type: string
+                              type: array
+                            resourceNameRegex:
+                              description: ResourceNameRegex is a regular expression
+                                to match the resource name.
+                              type: string
+                          required:
+                          - groupResource
+                          type: object
+                        directionPolicy:
+                          description: DirectionPolicy gates rule by resolved flow.
+                            Default Auto.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether rule participates in
+                            compilation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing rule id for diagnostics.
+                          type: string
+                        mode:
+                          description: |-
+                            Mode controls compilation behavior.
+                            Supported values: veleroNative, reversible.
+                          enum:
+                          - veleroNative
+                          - reversible
+                          type: string
+                        onConflict:
+                          description: OnConflict controls same-priority same-key
+                            conflict handling. Default Fail.
+                          enum:
+                          - Fail
+                          - Skip
+                          type: string
+                        pair:
+                          description: |-
+                            Pair is required when mode=reversible.
+                            Pair values may contain restricted placeholders.
+                          properties:
+                            path:
+                              description: Path is JSON Pointer target path.
+                              minLength: 1
+                              type: string
+                            sourceValue:
+                              description: |-
+                                SourceValue is the value for the baseline source side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                            targetValue:
+                              description: |-
+                                TargetValue is the value for the baseline target side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          - sourceValue
+                          - targetValue
+                          type: object
+                        priority:
+                          description: Priority decides conflict precedence, larger
+                            wins.
+                          format: int32
+                          type: integer
+                        veleroRule:
+                          description: VeleroRule is required when mode=veleroNative.
+                          properties:
+                            mergePatches:
+                              description: MergePatches is reserved for Phase 2.
+                              items:
+                                type: string
+                              type: array
+                            patches:
+                              description: Patches is Velero JSONPatch list (Phase
+                                1 supported).
+                              items:
+                                description: JSONPatch defines a JSON patch operation.
+                                properties:
+                                  from:
+                                    description: From is the source path (for "move"
+                                      or "copy" operations).
+                                    type: string
+                                  operation:
+                                    description: Operation is the type of JSON patch
+                                      operation (e.g., "replace", "add", "remove").
+                                    type: string
+                                  path:
+                                    description: Path is the JSON path to the field
+                                      to modify.
+                                    type: string
+                                  value:
+                                    description: Value is the value to set (for "replace"
+                                      or "add" operations).
+                                    type: string
+                                required:
+                                - operation
+                                - path
+                                type: object
+                              type: array
+                            strategicPatches:
+                              description: StrategicPatches is reserved for Phase
+                                2.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                      required:
+                      - conditions
+                      - mode
+                      type: object
+                    type: array
+                  modifierRuleSnapshotHash:
+                    description: ModifierRuleSnapshotHash is SHA256 over final modifierRuleSnapshot
+                      JSON.
+                    type: string
+                  modifierRules:
+                    description: ModifierRules defines unified reversible/veleroNative
+                      rule set.
+                    items:
+                      description: RestoreModifierRule defines unified modifier DSL
+                        rule.
+                      properties:
+                        applyTo:
+                          description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                            paths.
+                          items:
+                            description: RestoreModifierApplyTarget defines which
+                              restore path a rule applies to.
+                            type: string
+                          type: array
+                        conditions:
+                          description: Conditions reuses Velero condition structure.
+                          properties:
+                            groupResource:
+                              description: GroupResource is the group and resource
+                                to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                              type: string
+                            labelSelector:
+                              description: LabelSelector is a label selector to match
+                                resources.
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            namespaces:
+                              description: Namespaces is a list of namespaces to match.
+                              items:
+                                type: string
+                              type: array
+                            resourceNameRegex:
+                              description: ResourceNameRegex is a regular expression
+                                to match the resource name.
+                              type: string
+                          required:
+                          - groupResource
+                          type: object
+                        directionPolicy:
+                          description: DirectionPolicy gates rule by resolved flow.
+                            Default Auto.
+                          enum:
+                          - Auto
+                          - ForwardOnly
+                          - ReverseOnly
+                          type: string
+                        enabled:
+                          description: Enabled gates whether rule participates in
+                            compilation. Default true.
+                          type: boolean
+                        id:
+                          description: ID is optional user-facing rule id for diagnostics.
+                          type: string
+                        mode:
+                          description: |-
+                            Mode controls compilation behavior.
+                            Supported values: veleroNative, reversible.
+                          enum:
+                          - veleroNative
+                          - reversible
+                          type: string
+                        onConflict:
+                          description: OnConflict controls same-priority same-key
+                            conflict handling. Default Fail.
+                          enum:
+                          - Fail
+                          - Skip
+                          type: string
+                        pair:
+                          description: |-
+                            Pair is required when mode=reversible.
+                            Pair values may contain restricted placeholders.
+                          properties:
+                            path:
+                              description: Path is JSON Pointer target path.
+                              minLength: 1
+                              type: string
+                            sourceValue:
+                              description: |-
+                                SourceValue is the value for the baseline source side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                            targetValue:
+                              description: |-
+                                TargetValue is the value for the baseline target side.
+                                The selected value may contain restricted placeholders.
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          - sourceValue
+                          - targetValue
+                          type: object
+                        priority:
+                          description: Priority decides conflict precedence, larger
+                            wins.
+                          format: int32
+                          type: integer
+                        veleroRule:
+                          description: VeleroRule is required when mode=veleroNative.
+                          properties:
+                            mergePatches:
+                              description: MergePatches is reserved for Phase 2.
+                              items:
+                                type: string
+                              type: array
+                            patches:
+                              description: Patches is Velero JSONPatch list (Phase
+                                1 supported).
+                              items:
+                                description: JSONPatch defines a JSON patch operation.
+                                properties:
+                                  from:
+                                    description: From is the source path (for "move"
+                                      or "copy" operations).
+                                    type: string
+                                  operation:
+                                    description: Operation is the type of JSON patch
+                                      operation (e.g., "replace", "add", "remove").
+                                    type: string
+                                  path:
+                                    description: Path is the JSON path to the field
+                                      to modify.
+                                    type: string
+                                  value:
+                                    description: Value is the value to set (for "replace"
+                                      or "add" operations).
+                                    type: string
+                                required:
+                                - operation
+                                - path
+                                type: object
+                              type: array
+                            strategicPatches:
+                              description: StrategicPatches is reserved for Phase
+                                2.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                      required:
+                      - conditions
+                      - mode
+                      type: object
+                    type: array
+                  resourceSelection:
+                    description: ResourceSelection controls restore include/exclude
+                      scope.
+                    properties:
+                      excludedClusterScopedResources:
+                        description: ExcludedClusterScopedResources specifies cluster-scoped
+                          resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedNamespaceScopedResources:
+                        description: ExcludedNamespaceScopedResources specifies namespace-scoped
+                          resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedNamespaces:
+                        description: ExcludedNamespaces specifies namespaces to exclude.
+                        items:
+                          type: string
+                        type: array
+                      excludedResources:
+                        description: ExcludedResources specifies resources to exclude.
+                        items:
+                          type: string
+                        type: array
+                      includeClusterResources:
+                        description: IncludeClusterResources controls whether cluster-scoped
+                          resources are included.
+                        type: boolean
+                      includedClusterScopedResources:
+                        description: IncludedClusterScopedResources specifies cluster-scoped
+                          resources to include.
+                        items:
+                          type: string
+                        type: array
+                      includedNamespaceScopedResources:
+                        description: IncludedNamespaceScopedResources specifies namespace-scoped
+                          resources to include.
+                        items:
+                          type: string
+                        type: array
+                      includedNamespaces:
+                        description: IncludedNamespaces specifies namespaces to include.
+                        items:
+                          type: string
+                        type: array
+                      includedResources:
+                        description: IncludedResources specifies resources to include.
+                        items:
+                          type: string
+                        type: array
+                      labelSelector:
+                        description: LabelSelector filters resources by labels.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  storageClassMapping:
+                    description: StorageClassMapping defines StorageClass mapping
+                      behavior.
+                    properties:
+                      mappings:
+                        description: Mappings defines source->target mapping rules.
+                        items:
+                          description: RestoreClassMapping defines source->target
+                            class mapping for restore.
+                          properties:
+                            namespaces:
+                              description: Namespaces optionally scopes this mapping
+                                to specific namespaces.
+                              items:
+                                type: string
+                              type: array
+                            sourceClass:
+                              description: SourceClass is the class name in source
+                                cluster.
+                              type: string
+                            targetClass:
+                              description: TargetClass is the class name to use in
+                                target cluster.
+                              type: string
+                          required:
+                          - sourceClass
+                          - targetClass
+                          type: object
+                        type: array
+                      strictTargetValidation:
+                        description: StrictTargetValidation checks whether target
+                          classes exist before restore starts.
+                        type: boolean
+                      unmatchedPolicy:
+                        description: |-
+                          UnmatchedPolicy controls behavior when mapping is not matched.
+                          Supported values: Keep, Fail. Default is Keep.
+                        enum:
+                        - Keep
+                        - Fail
+                        type: string
+                    type: object
+                  useUnifiedDirectionResolver:
+                    description: |-
+                      UseUnifiedDirectionResolver toggles unified direction resolver + DSL compiler.
+                      Default false in Phase 1 for smooth migration.
+                    type: boolean
+                type: object
+              skipPodReadyCheck:
+                description: |-
+                  SkipPodReadyCheck 定义该实例执行容灾切换时是否默认跳过 Pod 就绪校验。
+                  true: 默认跳过容器就绪验证（仅校验副本配置已下发）
+                  false: 默认执行容器就绪验证（检查 readyReplicas）
+                  该默认值可被 DisasterOperation 入参覆盖。
+                type: boolean
             required:
             - config
             type: object
@@ -3494,8 +4934,17 @@ spec:
                 description: LastResourceSyncTime 上次资源同步时间
                 format: date-time
                 type: string
+              lastStableFsmState:
+                description: LastStableFsmState 进入 ConfigError 前的原始状态，用于配置恢复时回放
+                type: string
+              message:
+                description: Message 人类可读错误描述
+                type: string
               primaryCluster:
                 description: PrimaryCluster 当前主集群（活跃集群）名称
+                type: string
+              reason:
+                description: Reason 机器可读错误码
                 type: string
               resourceSyncName:
                 description: ResourceSyncName 管理的 ResourceSync 资源名称
@@ -3739,6 +5188,669 @@ spec:
                       NamespaceMapping 命名空间映射 (可选)
                       格式: 源命名空间 -> 目标命名空间
                     type: object
+                  restorePolicy:
+                    description: |-
+                      RestorePolicy 演练级 restorePolicy 覆盖配置。
+                      仅 drill/drill-cleanup 相关编排使用，未提供时继承实例 restorePolicy。
+                    properties:
+                      bulkModifierActions:
+                        description: BulkModifierActions defines instance-level bulk
+                          modifier intent.
+                        items:
+                          description: BulkModifierAction defines instance-level bulk
+                            modifier input.
+                          properties:
+                            action:
+                              description: |-
+                                Action controls bulk expansion behavior.
+                                Supported values: replaceExactValue, removeKey.
+                              enum:
+                              - replaceExactValue
+                              - removeKey
+                              type: string
+                            applyTo:
+                              description: ApplyTo scopes action to resourceSync/drill
+                                restore paths.
+                              items:
+                                description: RestoreModifierApplyTarget defines which
+                                  restore path a rule applies to.
+                                type: string
+                              type: array
+                            directionPolicy:
+                              description: DirectionPolicy controls generated rule
+                                direction semantics.
+                              enum:
+                              - Auto
+                              - ForwardOnly
+                              - ReverseOnly
+                              type: string
+                            enabled:
+                              description: Enabled gates whether action participates
+                                in snapshot generation. Default true.
+                              type: boolean
+                            id:
+                              description: ID is optional user-facing action id for
+                                diagnostics and deterministic rule IDs.
+                              type: string
+                            key:
+                              description: Key is required when action=removeKey.
+                              type: string
+                            sourceValue:
+                              description: SourceValue is required when action=replaceExactValue.
+                              type: string
+                            targetValue:
+                              description: TargetValue is required when action=replaceExactValue.
+                              type: string
+                          required:
+                          - action
+                          type: object
+                        type: array
+                      execution:
+                        description: Execution controls restore execution behavior.
+                        properties:
+                          existingResourcePolicy:
+                            description: |-
+                              ExistingResourcePolicy controls how to handle existing resources.
+                              Supported values: none, update.
+                            enum:
+                            - none
+                            - update
+                            - None
+                            - Update
+                            type: string
+                          itemOperationTimeout:
+                            description: ItemOperationTimeout configures velero restore
+                              item operation timeout.
+                            type: string
+                          restorePVs:
+                            description: RestorePVs controls whether to restore PersistentVolumes.
+                            type: boolean
+                        type: object
+                      ingressClassMapping:
+                        description: IngressClassMapping defines IngressClass mapping
+                          behavior.
+                        properties:
+                          mappings:
+                            description: Mappings defines source->target mapping rules.
+                            items:
+                              description: RestoreClassMapping defines source->target
+                                class mapping for restore.
+                              properties:
+                                namespaces:
+                                  description: Namespaces optionally scopes this mapping
+                                    to specific namespaces.
+                                  items:
+                                    type: string
+                                  type: array
+                                sourceClass:
+                                  description: SourceClass is the class name in source
+                                    cluster.
+                                  type: string
+                                targetClass:
+                                  description: TargetClass is the class name to use
+                                    in target cluster.
+                                  type: string
+                              required:
+                              - sourceClass
+                              - targetClass
+                              type: object
+                            type: array
+                          strictTargetValidation:
+                            description: StrictTargetValidation checks whether target
+                              classes exist before restore starts.
+                            type: boolean
+                          unmatchedPolicy:
+                            description: |-
+                              UnmatchedPolicy controls behavior when mapping is not matched.
+                              Supported values: Keep, Fail. Default is Keep.
+                            enum:
+                            - Keep
+                            - Fail
+                            type: string
+                        type: object
+                      modifierRuleSnapshot:
+                        description: ModifierRuleSnapshot defines server-generated
+                          final executable modifier rule set.
+                        items:
+                          description: RestoreModifierRule defines unified modifier
+                            DSL rule.
+                          properties:
+                            applyTo:
+                              description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                                paths.
+                              items:
+                                description: RestoreModifierApplyTarget defines which
+                                  restore path a rule applies to.
+                                type: string
+                              type: array
+                            conditions:
+                              description: Conditions reuses Velero condition structure.
+                              properties:
+                                groupResource:
+                                  description: GroupResource is the group and resource
+                                    to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                                  type: string
+                                labelSelector:
+                                  description: LabelSelector is a label selector to
+                                    match resources.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                namespaces:
+                                  description: Namespaces is a list of namespaces
+                                    to match.
+                                  items:
+                                    type: string
+                                  type: array
+                                resourceNameRegex:
+                                  description: ResourceNameRegex is a regular expression
+                                    to match the resource name.
+                                  type: string
+                              required:
+                              - groupResource
+                              type: object
+                            directionPolicy:
+                              description: DirectionPolicy gates rule by resolved
+                                flow. Default Auto.
+                              enum:
+                              - Auto
+                              - ForwardOnly
+                              - ReverseOnly
+                              type: string
+                            enabled:
+                              description: Enabled gates whether rule participates
+                                in compilation. Default true.
+                              type: boolean
+                            id:
+                              description: ID is optional user-facing rule id for
+                                diagnostics.
+                              type: string
+                            mode:
+                              description: |-
+                                Mode controls compilation behavior.
+                                Supported values: veleroNative, reversible.
+                              enum:
+                              - veleroNative
+                              - reversible
+                              type: string
+                            onConflict:
+                              description: OnConflict controls same-priority same-key
+                                conflict handling. Default Fail.
+                              enum:
+                              - Fail
+                              - Skip
+                              type: string
+                            pair:
+                              description: |-
+                                Pair is required when mode=reversible.
+                                Pair values may contain restricted placeholders.
+                              properties:
+                                path:
+                                  description: Path is JSON Pointer target path.
+                                  minLength: 1
+                                  type: string
+                                sourceValue:
+                                  description: |-
+                                    SourceValue is the value for the baseline source side.
+                                    The selected value may contain restricted placeholders.
+                                  minLength: 1
+                                  type: string
+                                targetValue:
+                                  description: |-
+                                    TargetValue is the value for the baseline target side.
+                                    The selected value may contain restricted placeholders.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - path
+                              - sourceValue
+                              - targetValue
+                              type: object
+                            priority:
+                              description: Priority decides conflict precedence, larger
+                                wins.
+                              format: int32
+                              type: integer
+                            veleroRule:
+                              description: VeleroRule is required when mode=veleroNative.
+                              properties:
+                                mergePatches:
+                                  description: MergePatches is reserved for Phase
+                                    2.
+                                  items:
+                                    type: string
+                                  type: array
+                                patches:
+                                  description: Patches is Velero JSONPatch list (Phase
+                                    1 supported).
+                                  items:
+                                    description: JSONPatch defines a JSON patch operation.
+                                    properties:
+                                      from:
+                                        description: From is the source path (for
+                                          "move" or "copy" operations).
+                                        type: string
+                                      operation:
+                                        description: Operation is the type of JSON
+                                          patch operation (e.g., "replace", "add",
+                                          "remove").
+                                        type: string
+                                      path:
+                                        description: Path is the JSON path to the
+                                          field to modify.
+                                        type: string
+                                      value:
+                                        description: Value is the value to set (for
+                                          "replace" or "add" operations).
+                                        type: string
+                                    required:
+                                    - operation
+                                    - path
+                                    type: object
+                                  type: array
+                                strategicPatches:
+                                  description: StrategicPatches is reserved for Phase
+                                    2.
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                          required:
+                          - conditions
+                          - mode
+                          type: object
+                        type: array
+                      modifierRuleSnapshotHash:
+                        description: ModifierRuleSnapshotHash is SHA256 over final
+                          modifierRuleSnapshot JSON.
+                        type: string
+                      modifierRules:
+                        description: ModifierRules defines unified reversible/veleroNative
+                          rule set.
+                        items:
+                          description: RestoreModifierRule defines unified modifier
+                            DSL rule.
+                          properties:
+                            applyTo:
+                              description: ApplyTo scopes rule to dataSync/resourceSync/drill
+                                paths.
+                              items:
+                                description: RestoreModifierApplyTarget defines which
+                                  restore path a rule applies to.
+                                type: string
+                              type: array
+                            conditions:
+                              description: Conditions reuses Velero condition structure.
+                              properties:
+                                groupResource:
+                                  description: GroupResource is the group and resource
+                                    to match (e.g., "persistentvolumeclaims" or "deployments.apps").
+                                  type: string
+                                labelSelector:
+                                  description: LabelSelector is a label selector to
+                                    match resources.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                namespaces:
+                                  description: Namespaces is a list of namespaces
+                                    to match.
+                                  items:
+                                    type: string
+                                  type: array
+                                resourceNameRegex:
+                                  description: ResourceNameRegex is a regular expression
+                                    to match the resource name.
+                                  type: string
+                              required:
+                              - groupResource
+                              type: object
+                            directionPolicy:
+                              description: DirectionPolicy gates rule by resolved
+                                flow. Default Auto.
+                              enum:
+                              - Auto
+                              - ForwardOnly
+                              - ReverseOnly
+                              type: string
+                            enabled:
+                              description: Enabled gates whether rule participates
+                                in compilation. Default true.
+                              type: boolean
+                            id:
+                              description: ID is optional user-facing rule id for
+                                diagnostics.
+                              type: string
+                            mode:
+                              description: |-
+                                Mode controls compilation behavior.
+                                Supported values: veleroNative, reversible.
+                              enum:
+                              - veleroNative
+                              - reversible
+                              type: string
+                            onConflict:
+                              description: OnConflict controls same-priority same-key
+                                conflict handling. Default Fail.
+                              enum:
+                              - Fail
+                              - Skip
+                              type: string
+                            pair:
+                              description: |-
+                                Pair is required when mode=reversible.
+                                Pair values may contain restricted placeholders.
+                              properties:
+                                path:
+                                  description: Path is JSON Pointer target path.
+                                  minLength: 1
+                                  type: string
+                                sourceValue:
+                                  description: |-
+                                    SourceValue is the value for the baseline source side.
+                                    The selected value may contain restricted placeholders.
+                                  minLength: 1
+                                  type: string
+                                targetValue:
+                                  description: |-
+                                    TargetValue is the value for the baseline target side.
+                                    The selected value may contain restricted placeholders.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - path
+                              - sourceValue
+                              - targetValue
+                              type: object
+                            priority:
+                              description: Priority decides conflict precedence, larger
+                                wins.
+                              format: int32
+                              type: integer
+                            veleroRule:
+                              description: VeleroRule is required when mode=veleroNative.
+                              properties:
+                                mergePatches:
+                                  description: MergePatches is reserved for Phase
+                                    2.
+                                  items:
+                                    type: string
+                                  type: array
+                                patches:
+                                  description: Patches is Velero JSONPatch list (Phase
+                                    1 supported).
+                                  items:
+                                    description: JSONPatch defines a JSON patch operation.
+                                    properties:
+                                      from:
+                                        description: From is the source path (for
+                                          "move" or "copy" operations).
+                                        type: string
+                                      operation:
+                                        description: Operation is the type of JSON
+                                          patch operation (e.g., "replace", "add",
+                                          "remove").
+                                        type: string
+                                      path:
+                                        description: Path is the JSON path to the
+                                          field to modify.
+                                        type: string
+                                      value:
+                                        description: Value is the value to set (for
+                                          "replace" or "add" operations).
+                                        type: string
+                                    required:
+                                    - operation
+                                    - path
+                                    type: object
+                                  type: array
+                                strategicPatches:
+                                  description: StrategicPatches is reserved for Phase
+                                    2.
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                          required:
+                          - conditions
+                          - mode
+                          type: object
+                        type: array
+                      resourceSelection:
+                        description: ResourceSelection controls restore include/exclude
+                          scope.
+                        properties:
+                          excludedClusterScopedResources:
+                            description: ExcludedClusterScopedResources specifies
+                              cluster-scoped resources to exclude.
+                            items:
+                              type: string
+                            type: array
+                          excludedNamespaceScopedResources:
+                            description: ExcludedNamespaceScopedResources specifies
+                              namespace-scoped resources to exclude.
+                            items:
+                              type: string
+                            type: array
+                          excludedNamespaces:
+                            description: ExcludedNamespaces specifies namespaces to
+                              exclude.
+                            items:
+                              type: string
+                            type: array
+                          excludedResources:
+                            description: ExcludedResources specifies resources to
+                              exclude.
+                            items:
+                              type: string
+                            type: array
+                          includeClusterResources:
+                            description: IncludeClusterResources controls whether
+                              cluster-scoped resources are included.
+                            type: boolean
+                          includedClusterScopedResources:
+                            description: IncludedClusterScopedResources specifies
+                              cluster-scoped resources to include.
+                            items:
+                              type: string
+                            type: array
+                          includedNamespaceScopedResources:
+                            description: IncludedNamespaceScopedResources specifies
+                              namespace-scoped resources to include.
+                            items:
+                              type: string
+                            type: array
+                          includedNamespaces:
+                            description: IncludedNamespaces specifies namespaces to
+                              include.
+                            items:
+                              type: string
+                            type: array
+                          includedResources:
+                            description: IncludedResources specifies resources to
+                              include.
+                            items:
+                              type: string
+                            type: array
+                          labelSelector:
+                            description: LabelSelector filters resources by labels.
+                            properties:
+                              matchExpressions:
+                                description: matchExpressions is a list of label selector
+                                  requirements. The requirements are ANDed.
+                                items:
+                                  description: |-
+                                    A label selector requirement is a selector that contains values, a key, and an operator that
+                                    relates the key and values.
+                                  properties:
+                                    key:
+                                      description: key is the label key that the selector
+                                        applies to.
+                                      type: string
+                                    operator:
+                                      description: |-
+                                        operator represents a key's relationship to a set of values.
+                                        Valid operators are In, NotIn, Exists and DoesNotExist.
+                                      type: string
+                                    values:
+                                      description: |-
+                                        values is an array of string values. If the operator is In or NotIn,
+                                        the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                        the values array must be empty. This array is replaced during a strategic
+                                        merge patch.
+                                      items:
+                                        type: string
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                  required:
+                                  - key
+                                  - operator
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
+                              matchLabels:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                  map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                  operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                type: object
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                      storageClassMapping:
+                        description: StorageClassMapping defines StorageClass mapping
+                          behavior.
+                        properties:
+                          mappings:
+                            description: Mappings defines source->target mapping rules.
+                            items:
+                              description: RestoreClassMapping defines source->target
+                                class mapping for restore.
+                              properties:
+                                namespaces:
+                                  description: Namespaces optionally scopes this mapping
+                                    to specific namespaces.
+                                  items:
+                                    type: string
+                                  type: array
+                                sourceClass:
+                                  description: SourceClass is the class name in source
+                                    cluster.
+                                  type: string
+                                targetClass:
+                                  description: TargetClass is the class name to use
+                                    in target cluster.
+                                  type: string
+                              required:
+                              - sourceClass
+                              - targetClass
+                              type: object
+                            type: array
+                          strictTargetValidation:
+                            description: StrictTargetValidation checks whether target
+                              classes exist before restore starts.
+                            type: boolean
+                          unmatchedPolicy:
+                            description: |-
+                              UnmatchedPolicy controls behavior when mapping is not matched.
+                              Supported values: Keep, Fail. Default is Keep.
+                            enum:
+                            - Keep
+                            - Fail
+                            type: string
+                        type: object
+                      useUnifiedDirectionResolver:
+                        description: |-
+                          UseUnifiedDirectionResolver toggles unified direction resolver + DSL compiler.
+                          Default false in Phase 1 for smooth migration.
+                        type: boolean
+                    type: object
                   skipValidation:
                     description: SkipValidation 跳过前置校验
                     type: boolean
@@ -3787,6 +5899,11 @@ spec:
               skipFinalSync:
                 description: SkipFinalSync 是否跳过故障切换中的最终同步步骤
                 type: boolean
+              skipPodReadyCheck:
+                description: |-
+                  SkipPodReadyCheck 是否跳过本次操作中的 Pod 就绪校验。
+                  该字段用于覆盖 DisasterInstance.spec.skipPodReadyCheck 默认策略。
+                type: boolean
               skipScaleDownSource:
                 description: |-
                   SkipScaleDownSource 是否跳过故障切换中的源集群缩零步骤
@@ -3802,6 +5919,7 @@ spec:
                 description: |-
                   WaitUntilReady 在故障切换时，是否等待所有 Pod 就绪才认为切换成功。
                   如果为 false，仅检查期望副本数是否下发。如果为 true，会检查 .status.readyReplicas。
+                  建议优先使用 SkipPodReadyCheck 进行显式覆盖。
                 type: boolean
             required:
             - operationType
@@ -3809,6 +5927,59 @@ spec:
           status:
             description: DisasterOperationStatus 定义 DisasterOperation 的观测状态
             properties:
+              autoCancelCompletionTime:
+                description: AutoCancelCompletionTime 自动补偿完成时间
+                format: date-time
+                type: string
+              autoCancelCurrentStep:
+                description: AutoCancelCurrentStep 当前执行中的自动补偿步骤
+                type: string
+              autoCancelMode:
+                description: AutoCancelMode 自动补偿分流模式
+                type: string
+              autoCancelReason:
+                description: AutoCancelReason 自动补偿触发原因或最终失败原因
+                type: string
+              autoCancelStatus:
+                description: AutoCancelStatus 自动补偿执行状态
+                type: string
+              autoCancelSteps:
+                description: AutoCancelSteps 自动补偿步骤状态
+                items:
+                  description: StepStatus 表示单个步骤的状态
+                  properties:
+                    completionTime:
+                      description: CompletionTime 步骤完成时间
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message 附加信息
+                      type: string
+                    name:
+                      description: Name 步骤名称
+                      type: string
+                    startTime:
+                      description: StartTime 步骤开始时间
+                      format: date-time
+                      type: string
+                    state:
+                      description: State 步骤状态 (Pending/Running/Completed/Failed/Skipped)
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+              autoCancelTriggerStep:
+                description: AutoCancelTriggerStep 触发自动补偿的 failover 步骤
+                type: string
+              autoCancelTriggered:
+                description: AutoCancelTriggered 标识 failover 失败后是否触发了自动补偿
+                type: boolean
+              autoCancelTriggeredAt:
+                description: AutoCancelTriggeredAt 自动补偿触发时间
+                format: date-time
+                type: string
               completionTime:
                 description: CompletionTime 操作完成时间
                 format: date-time
@@ -3925,12 +6096,18 @@ spec:
                 - currentLevelIndex
                 - totalLevels
                 type: object
+              manualInterventionRequired:
+                description: ManualInterventionRequired 标识是否仍需人工介入
+                type: boolean
               message:
                 description: Message 操作的附加信息
                 type: string
               nextRetryTime:
                 description: NextRetryTime 下次重试时间
                 format: date-time
+                type: string
+              reason:
+                description: Reason 机器可读错误码
                 type: string
               resourceRestoreName:
                 description: ResourceRestoreName 演练创建的资源恢复 AppRestore 名称 (仅 Drill
@@ -4073,6 +6250,11 @@ spec:
                 enum:
                 - Enabled
                 - Disabled
+                type: string
+              ttl:
+                description: |-
+                  TTL defines how long Velero backups created by this AutoBackup policy are retained.
+                  Only effective when type is AutoBackup.
                 type: string
               type:
                 description: Type specifies the type of the policy
@@ -4240,6 +6422,19 @@ spec:
           status:
             description: ResourceSyncStatus 定义 ResourceSync 的观测状态
             properties:
+              clusterRestoreStatus:
+                description: ClusterRestoreStatus 记录 cluster phase 的 restore 状态
+                enum:
+                - Pending
+                - Restoring
+                - InProgress
+                - Succeeded
+                - Failed
+                - Cancelled
+                - Initiating
+                - Deleting
+                - Unknown
+                type: string
               conditions:
                 description: Conditions 最新的观测状态
                 items:
@@ -4333,12 +6528,40 @@ spec:
               lastBackupName:
                 description: LastBackupName 上次创建的 AppBackup 名称
                 type: string
+              lastClusterRestoreName:
+                description: LastClusterRestoreName 上次创建或观测到的 cluster phase AppRestore
+                  名称
+                type: string
+              lastNamespaceRestoreName:
+                description: LastNamespaceRestoreName 上次创建或观测到的 namespaced phase AppRestore
+                  名称
+                type: string
               lastRestoreName:
                 description: LastRestoreName 上次创建的 AppRestore 名称
                 type: string
               lastSyncTime:
                 description: LastSyncTime 上次同步时间
                 format: date-time
+                type: string
+              message:
+                description: Message 人类可读错误描述
+                type: string
+              namespaceRestoreStatus:
+                description: NamespaceRestoreStatus 记录 namespaced phase 的 restore
+                  状态
+                enum:
+                - Pending
+                - Restoring
+                - InProgress
+                - Succeeded
+                - Failed
+                - Cancelled
+                - Initiating
+                - Deleting
+                - Unknown
+                type: string
+              reason:
+                description: Reason 机器可读错误码
                 type: string
               state:
                 description: State 当前同步状态
@@ -4397,8 +6620,31 @@ spec:
             properties:
               accessKey:
                 type: string
+              addressingStyle:
+                default: PathStyle
+                description: AddressingStyle controls the S3 bucket addressing mode
+                  used by validation and runtime.
+                enum:
+                - PathStyle
+                - VirtualHostedStyle
+                type: string
               bucket:
                 type: string
+              caSecretRef:
+                description: CASecretRef references a Secret in the same namespace
+                  whose `ca.crt` entry contains a custom CA bundle.
+                properties:
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               endpoint:
                 type: string
               quotaBytes:

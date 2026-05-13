@@ -38,6 +38,10 @@ data:
       timeout: 24h
       access_expire: 24h
       refresh_expire: 168h
+    license:
+      enabled: {{ .Values.license.enabled }}
+      namespace: {{ include "disaster-system.licenseNamespace" . | quote }}
+      caPath: {{ .Values.license.caPath | quote }}
 ---
 # Source: disaster-server/templates/serviceaccount.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -134,7 +138,7 @@ spec:
     spec:
       serviceAccountName: disaster-server
       imagePullSecrets:
-        - name: default-secret
+        - name: {{ include "disaster-system.imagePullSecretName" . }}
       containers:
         - name: disaster-server
           env:

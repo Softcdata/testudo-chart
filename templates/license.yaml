@@ -1,0 +1,116 @@
+{{- $namespace := include "disaster-system.licenseNamespace" . -}}
+{{- if .Values.license.secret.create }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.license.secret.name | default "disaster-platform-license" }}
+  namespace: {{ $namespace }}
+  labels:
+    disaster.wuxs.vip/license: "true"
+type: disaster.wuxs.vip/license
+stringData:
+  license.lic: |
+{{ .Values.license.secret.license | toString | nindent 4 }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: disaster-platform-license-operator
+  namespace: {{ $namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames:
+  - disaster-platform-license
+  - disaster-platform-install-id
+  verbs: ["get", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames:
+  - disaster-platform-license-status
+  - disaster-platform-license-gate-state
+  verbs: ["get", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: disaster-platform-license-operator
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: disaster-platform-license-operator
+subjects:
+- kind: ServiceAccount
+  name: disaster-operator-controller-manager
+  namespace: {{ include "disaster-system.namespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: disaster-platform-license-server
+  namespace: {{ $namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames:
+  - disaster-platform-license
+  verbs: ["get", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames:
+  - disaster-platform-license-status
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: disaster-platform-license-server
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: disaster-platform-license-server
+subjects:
+- kind: ServiceAccount
+  name: disaster-server
+  namespace: {{ include "disaster-system.namespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: disaster-platform-license-status-reader
+  namespace: {{ $namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames:
+  - disaster-platform-license-status
+  verbs: ["get"]
+{{- if .Values.license.statusReader.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: disaster-platform-license-status-reader
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: disaster-platform-license-status-reader
+subjects:
+- kind: ServiceAccount
+  name: disaster-web
+  namespace: {{ include "disaster-system.namespace" . }}
+{{- end }}

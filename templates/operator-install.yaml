@@ -915,7 +915,7 @@ spec:
         control-plane: controller-manager
     spec:
       imagePullSecrets:
-        - name: default-secret
+        - name: {{ include "disaster-system.imagePullSecretName" . }}
       containers:
       - args:
         - --metrics-bind-address=:8443

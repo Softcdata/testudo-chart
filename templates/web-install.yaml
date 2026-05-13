@@ -18,7 +18,7 @@ spec:
         app: disaster-web
     spec:
       imagePullSecrets:
-        - name: default-secret
+        - name: {{ include "disaster-system.imagePullSecretName" . }}
       containers:
         - name: web
           image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"

@@ -3,24 +3,26 @@ global:
 
 # 镜像拉取 Secret 配置。Chart 会固定创建并引用名为 default-secret 的 Secret
 imagePullSecret:
+  # 如集群里已存在可用的 docker-registry Secret，可直接复用，设置后 chart 不再创建 default-secret
+  existingSecret: ""
   registry: swr.cn-east-3.myhuaweicloud.com
-  username: ""
-  password: ""
+  username: "cn-east-3@HPUASTMUH2SDASAZ6DUR"
+  password: "97cd784341e5334bc03a386c92ed8f1689630f22f6f84e7eb4e3d20db4c7481d"
   email: ""
 
 # 项目镜像统一配置
 images:
   operator:
     repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-operator-arm64
-    tag: v2.0.1
+    tag: v2.3.0
     pullPolicy: IfNotPresent
   server:
     repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-server
-    tag: v2.0.1
+    tag: v2.3.0
     pullPolicy: IfNotPresent
   web:
     repository: swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-web
-    tag: v2.0.0
+    tag: v2.2.0
     pullPolicy: IfNotPresent
 
 operator:
@@ -42,3 +44,20 @@ server:
     type: ClusterIP
     port: 30081
   strategy: {}
+
+license:
+  enabled: true
+  namespace: ""
+  caPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  secret:
+    create: false
+    name: disaster-platform-license
+    license: ""
+  statusReader:
+    enabled: false
+
+webhook:
+  enabled: true
+  certManager:
+    enabled: true
+  caBundle: ""
