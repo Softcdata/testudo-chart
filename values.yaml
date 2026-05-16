@@ -1,0 +1,65 @@
+global:
+  namespace: disaster-system
+  timezone: Asia/Shanghai
+
+# 镜像拉取 Secret 配置。Chart 会固定创建并引用名为 default-secret 的 Secret
+imagePullSecret:
+  # 如集群里已存在可用的 docker-registry Secret，可直接复用，设置后 chart 不再创建 default-secret。
+  # 开源默认值不携带任何私有仓库凭据；需要由安装方提前创建 default-secret 或在私有 values 文件中覆盖。
+  existingSecret: default-secret
+  registry: ""
+  username: ""
+  password: ""
+  email: ""
+
+# 项目镜像统一配置
+images:
+  operator:
+    repository: ghcr.io/softcdata/testudo-operator
+    tag: v2.3.0
+    pullPolicy: Always
+  server:
+    repository: ghcr.io/softcdata/testudo-server
+    tag: v2.3.0
+    pullPolicy: Always
+  web:
+    repository: ghcr.io/softcdata/testudo-web
+    tag: v2.2.0
+    pullPolicy: IfNotPresent
+
+operator:
+  strategy: {}
+
+# Web 端专有配置
+web:
+  # 使用 K8s 内部 CoreDNS 名称，供 disaster-web 代理转发到 disaster-server
+  backendUrl: "http://disaster-server:30081"
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30087
+  strategy: {}
+
+# Server 端专有配置（ClusterIP 仅集群内访问，由 web 代理对外提供服务）
+server:
+  service:
+    type: ClusterIP
+    port: 30081
+  strategy: {}
+
+license:
+  enabled: true
+  namespace: ""
+  caPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  secret:
+    create: false
+    name: disaster-platform-license
+    license: ""
+  statusReader:
+    enabled: false
+
+webhook:
+  enabled: true
+  certManager:
+    enabled: true
+  caBundle: ""

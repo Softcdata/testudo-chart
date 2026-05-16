@@ -1,0 +1,12 @@
+.git/
+.gitignore
+.DS_Store
+*.swp
+*.tmp
+dir/
+dist/
+disaster-system-*/
+process_yamls.py
+__pycache__/
+*.pyc
+*.tgz
