@@ -58,7 +58,7 @@ webhooks:
     service:
       name: disaster-operator-webhook-service
       namespace: {{ $namespace }}
-      path: /validate-disaster-wuxs-vip-v1-cluster
+      path: /validate-testudo-softcdata-com-v1-cluster
   {{- if and (not .Values.webhook.certManager.enabled) .Values.webhook.caBundle }}
     caBundle: {{ .Values.webhook.caBundle | quote }}
   {{- end }}
@@ -66,7 +66,7 @@ webhooks:
   name: vcluster.kb.io
   rules:
   - apiGroups:
-    - disaster.wuxs.vip
+    - testudo.softcdata.com
     apiVersions:
     - v1
     operations:
@@ -80,7 +80,7 @@ webhooks:
     service:
       name: disaster-operator-webhook-service
       namespace: {{ $namespace }}
-      path: /validate-disaster-wuxs-vip-v1-disasterinstance
+      path: /validate-testudo-softcdata-com-v1-disasterinstance
   {{- if and (not .Values.webhook.certManager.enabled) .Values.webhook.caBundle }}
     caBundle: {{ .Values.webhook.caBundle | quote }}
   {{- end }}
@@ -88,7 +88,7 @@ webhooks:
   name: vdisasterinstance.kb.io
   rules:
   - apiGroups:
-    - disaster.wuxs.vip
+    - testudo.softcdata.com
     apiVersions:
     - v1
     operations:

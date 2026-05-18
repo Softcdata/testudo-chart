@@ -17,13 +17,17 @@ spec:
       labels:
         app: disaster-web
     spec:
+      {{- if include "disaster-system.useImagePullSecret" . }}
       imagePullSecrets:
         - name: {{ include "disaster-system.imagePullSecretName" . }}
+      {{- end }}
       containers:
         - name: web
           image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Asia/Shanghai" | quote }}
             - name: BACKEND_URL
               value: "{{ .Values.web.backendUrl }}"
           ports:

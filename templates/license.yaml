@@ -7,8 +7,8 @@ metadata:
   name: {{ .Values.license.secret.name | default "disaster-platform-license" }}
   namespace: {{ $namespace }}
   labels:
-    disaster.wuxs.vip/license: "true"
-type: disaster.wuxs.vip/license
+    testudo.softcdata.com/license: "true"
+type: testudo.softcdata.com/license
 stringData:
   license.lic: |
 {{ .Values.license.secret.license | toString | nindent 4 }}

@@ -3,9 +3,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: appbackups.disaster.wuxs.vip
+  name: appbackups.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: AppBackup
     listKind: AppBackupList
@@ -1026,9 +1026,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: apprestores.disaster.wuxs.vip
+  name: apprestores.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: AppRestore
     listKind: AppRestoreList
@@ -1804,9 +1804,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: backuppolicies.disaster.wuxs.vip
+  name: backuppolicies.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: BackupPolicy
     listKind: BackupPolicyList
@@ -1865,9 +1865,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: backuprestorestatisticses.disaster.wuxs.vip
+  name: backuprestorestatisticses.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: BackupRestoreStatistics
     listKind: BackupRestoreStatisticsList
@@ -2134,9 +2134,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: clusters.disaster.wuxs.vip
+  name: clusters.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: Cluster
     listKind: ClusterList
@@ -2336,9 +2336,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: datasyncs.disaster.wuxs.vip
+  name: datasyncs.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DataSync
     listKind: DataSyncList
@@ -2579,9 +2579,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterbackups.disaster.wuxs.vip
+  name: disasterbackups.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterBackup
     listKind: DisasterBackupList
@@ -2830,9 +2830,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterconfigs.disaster.wuxs.vip
+  name: disasterconfigs.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterConfig
     listKind: DisasterConfigList
@@ -2990,9 +2990,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterdrills.disaster.wuxs.vip
+  name: disasterdrills.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterDrill
     listKind: DisasterDrillList
@@ -3889,9 +3889,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disastergroups.disaster.wuxs.vip
+  name: disastergroups.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterGroup
     listKind: DisasterGroupList
@@ -4064,9 +4064,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterinstances.disaster.wuxs.vip
+  name: disasterinstances.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterInstance
     listKind: DisasterInstanceList
@@ -4964,9 +4964,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterjobs.disaster.wuxs.vip
+  name: disasterjobs.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterJob
     listKind: DisasterJobList
@@ -5108,9 +5108,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasteroperations.disaster.wuxs.vip
+  name: disasteroperations.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterOperation
     listKind: DisasterOperationList
@@ -6176,9 +6176,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: disasterpolicies.disaster.wuxs.vip
+  name: disasterpolicies.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: DisasterPolicy
     listKind: DisasterPolicyList
@@ -6323,9 +6323,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: resourcesyncs.disaster.wuxs.vip
+  name: resourcesyncs.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: ResourceSync
     listKind: ResourceSyncList
@@ -6394,7 +6394,7 @@ spec:
                 description: StandbyModifier 定义如何修改资源以实现 Standby 模式
                 properties:
                   originalReplicaAnnotation:
-                    default: disaster.wuxs.vip/original-replica-count
+                    default: testudo.softcdata.com/original-replica-count
                     description: OriginalReplicaAnnotation 存储原始副本数的注解键
                     type: string
                   scaleToZero:
@@ -6578,9 +6578,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: storagerepositories.disaster.wuxs.vip
+  name: storagerepositories.testudo.softcdata.com
 spec:
-  group: disaster.wuxs.vip
+  group: testudo.softcdata.com
   names:
     kind: StorageRepository
     listKind: StorageRepositoryList

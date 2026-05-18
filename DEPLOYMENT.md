@@ -1,315 +1,225 @@
-# 灾备系统部署说明
+# Testudo Helm Chart 部署说明
 
-本说明面向当前仓库中的 `disaster-system` Helm Chart。该 Chart 会部署三个组件：
+本仓库用于维护 `testudo-chart` Helm Chart。Chart 会部署以下组件：
 
 - `disaster-operator`
 - `disaster-server`
 - `disaster-web`
 
-## 1. 当前默认部署拓扑
+默认镜像使用 Docker Hub 公共仓库：
 
-当前 Chart 的默认行为如下：
+- `docker.io/softcdata/testudo-operator:v1.0.0`
+- `docker.io/softcdata/testudo-server:v1.0.0`
+- `docker.io/softcdata/testudo-web:v1.0.0`
 
-- `disaster-web` 通过 `NodePort` 对外暴露，默认端口为 `30087`
-- `disaster-server` 通过 `ClusterIP` 在集群内暴露，默认端口为 `30081`
-- `disaster-web` 默认通过集群内地址 `http://disaster-server:30081` 访问后端
-
-因此，正常安装时通常不需要手工指定 `web.backendUrl`。
-
-## 2. 前置条件
+## 1. 前置条件
 
 - Kubernetes 集群可用
 - `kubectl` 可正常访问目标集群
 - Helm 版本为 v3 或以上
+- 如启用默认 webhook 配置，目标集群需要已安装 cert-manager
 
-如未安装 Helm，可参考官方脚本：
+## 2. 使用 GitHub Pages Helm 仓库安装
+
+GitHub Pages 启用后，用户可以通过以下方式安装：
 
 ```bash
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
+helm repo add testudo https://softcdata.github.io/testudo-chart
+helm repo update
+
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace
 ```
 
-## 3. 关键配置项
+默认安装完成后，可通过以下地址访问 Web 控制台：
 
-当前默认值以 [values.yaml](/home/chenxi/YS/disaster-system-chart/values.yaml) 为准。
+```text
+http://<NodeIP>:30087
+```
+
+## 3. 从源码目录本地安装
+
+如果还没有启用 GitHub Pages，也可以从当前源码目录直接安装：
+
+```bash
+helm upgrade --install testudo . \
+  -n disaster-system \
+  --create-namespace
+```
+
+安装前建议先执行：
+
+```bash
+helm lint .
+helm template testudo . > /tmp/testudo-chart-rendered.yaml
+```
+
+## 4. 关键配置项
 
 ### `global`
 
 - `global.namespace`: 写入资源 `metadata.namespace` 的命名空间，默认值为 `disaster-system`
-- `global.timezone`: 写入 `disaster-operator` 和 `disaster-server` 容器环境变量 `TZ`，默认值为 `Asia/Shanghai`
+- `global.timezone`: 写入容器环境变量 `TZ`，默认值为 `Asia/Shanghai`
 
-注意：本 Chart 的资源命名空间来自 `global.namespace`，不是自动跟随 `helm install -n ...`。如果你安装到其他命名空间，例如 `demo`，请同时设置：
+注意：本 Chart 的资源命名空间来自 `global.namespace`，不会自动跟随 `helm install -n`。如果安装到其他命名空间，例如 `demo`，需要同时设置：
 
 ```bash
---set global.namespace=demo
+helm upgrade --install testudo testudo/testudo-chart \
+  -n demo \
+  --create-namespace \
+  --set global.namespace=demo
+```
+
+### `images`
+
+- `images.operator.repository`: operator 镜像仓库
+- `images.operator.tag`: operator 镜像标签
+- `images.server.repository`: server 镜像仓库
+- `images.server.tag`: server 镜像标签
+- `images.web.repository`: web 镜像仓库
+- `images.web.tag`: web 镜像标签
+
+默认值指向 Docker Hub 公共镜像。若使用私有镜像仓库，可以通过 values 文件覆盖：
+
+```yaml
+images:
+  operator:
+    repository: registry.example.com/softcdata/testudo-operator
+    tag: v1.0.0
+  server:
+    repository: registry.example.com/softcdata/testudo-server
+    tag: v1.0.0
+  web:
+    repository: registry.example.com/softcdata/testudo-web
+    tag: v1.0.0
 ```
 
 ### `imagePullSecret`
 
-- `imagePullSecret.existingSecret`: 已存在的镜像拉取 Secret 名称；设置后 Chart 不再创建 `default-secret`
-- `imagePullSecret.registry`: 镜像仓库地址
-- `imagePullSecret.username`: 镜像仓库用户名
-- `imagePullSecret.password`: 镜像仓库密码
-- `imagePullSecret.email`: 可选邮箱字段
+默认不创建、不引用 imagePullSecret，因为 Docker Hub 公共镜像不需要拉取凭据。
 
-说明：
+如需复用已有 Secret：
 
-- `disaster-operator`、`disaster-server`、`disaster-web` 三个 Deployment 都会引用镜像拉取 Secret
-- 默认情况下，Chart 会创建名为 `default-secret` 的 `kubernetes.io/dockerconfigjson` Secret
-- 如果设置了 `imagePullSecret.existingSecret`，Chart 会直接复用该 Secret，并跳过创建 `default-secret`
-- 仅在未设置 `imagePullSecret.existingSecret` 时，`imagePullSecret.username` / `imagePullSecret.password` 才是必填项
+```bash
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace \
+  --set imagePullSecret.existingSecret=my-registry-secret
+```
 
-### `images`
+如需让 Chart 创建 Secret：
 
-- `images.operator`: 默认 `swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-operator-arm64:v2.0.1`
-- `images.server`: 默认 `swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-server:v2.0.1`
-- `images.web`: 默认 `swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-web:v2.0.0`
-
-### `strategy`
-
-- `operator.strategy`: 对应 `disaster-operator` Deployment 的发布策略
-- `server.strategy`: 对应 `disaster-server` Deployment 的发布策略
-- `web.strategy`: 对应 `disaster-web` Deployment 的发布策略
-
-说明：默认值均为 `{}`，即沿用 Kubernetes 默认策略。你可以配置 `type: Recreate` 或 `type: RollingUpdate` 及其子字段。
+```yaml
+imagePullSecret:
+  create: true
+  name: default-secret
+  registry: registry.example.com
+  username: your-username
+  password: your-password
+  email: ""
+```
 
 ### `web`
 
-- `web.backendUrl`: 默认 `http://disaster-server:30081`
+- `web.backendUrl`: Web 容器代理到 server 的地址，默认 `http://disaster-server:30081`
 - `web.service.type`: 默认 `NodePort`
 - `web.service.port`: 默认 `80`
 - `web.service.nodePort`: 默认 `30087`
-
-说明：`web.backendUrl` 默认使用集群内服务发现。只有当你希望前端代理到其他后端地址时，才需要覆盖它。
 
 ### `server`
 
 - `server.service.type`: 默认 `ClusterIP`
 - `server.service.port`: 默认 `30081`
 
-说明：当前 Chart 没有 `server.service.nodePort` 配置项，`server` 默认不直接对集群外暴露。
-
 ### `license`
 
 - `license.enabled`: server 侧 License gate 开关，默认 `true`
-- `license.namespace`: License Secret、状态 ConfigMap 和 gate state 所在命名空间；默认跟随 `global.namespace`
-- `license.caPath`: Pod 内用于计算部署指纹的 API Server CA 路径，默认 `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`
+- `license.namespace`: License Secret、状态 ConfigMap 和 gate state 所在命名空间，默认跟随 `global.namespace`
 - `license.secret.create`: 是否随 Chart 创建 `disaster-platform-license` Secret，默认 `false`
 - `license.secret.license`: 当 `license.secret.create=true` 时写入 Secret `license.lic` 的 License JSON 内容
-- `license.statusReader.enabled`: 是否创建面向 `disaster-web` ServiceAccount 的只读 status ConfigMap 绑定，默认 `false`
+- `license.statusReader.enabled`: 是否创建面向 Web ServiceAccount 的只读 status ConfigMap 绑定，默认 `false`
 
-说明：
-
-- 默认安装不会创建真实 License Secret，避免把企业授权内容写入通用 values 文件。
-- 安装企业 License 推荐使用后端接口 `POST /apis/v1/platform-license/install` 或 `disasterctl license install`。
-- 如需通过 Helm 预置 License，可使用 `license.secret.create=true` 并提供完整 License JSON。
-- License 签发私钥不得写入 Chart、values 文件、镜像或仓库；Chart 只允许携带已签发的 `.lic` 内容。
-- Chart 会为 operator/server 创建 License 相关 Role/RoleBinding：operator 可维护 `disaster-platform-license-status`、`disaster-platform-license-gate-state` 和安装 ID；server 可安装/读取 `disaster-platform-license` 并读取 status ConfigMap。
-- `disaster-platform-license-status-reader` 只允许读取 `disaster-platform-license-status`，不授予读取 License Secret 或写 status ConfigMap 的权限。
-
-### `webhook`
-
-- `webhook.enabled`: 是否安装 admission webhook，默认 `true`
-- `webhook.certManager.enabled`: 是否使用 cert-manager 生成 webhook serving cert 并注入 CA，默认 `true`
-- `webhook.caBundle`: 当 `webhook.certManager.enabled=false` 时可显式提供 `ValidatingWebhookConfiguration` 的 CA bundle
-
-说明：
-
-- 默认会安装 `disaster-operator-webhook-service`、`Certificate`、`Issuer` 和 `ValidatingWebhookConfiguration`。
-- Cluster validating webhook 路径为 `/validate-disaster-wuxs-vip-v1-cluster`，用于在 admission 阶段拦截第 3 个免费版 Cluster。
-- 默认依赖 cert-manager CRD。若目标集群没有 cert-manager，请关闭 `webhook.certManager.enabled` 并提供 `webhook.caBundle` 与同名 TLS Secret，或先安装 cert-manager。
-
-## 4. 镜像准备
-
-镜像版本要与 [values.yaml](/home/chenxi/YS/disaster-system-chart/values.yaml) 保持一致。
-
-### 方式 A：集群节点可直接拉取
-
-```bash
-docker login swr.cn-east-3.myhuaweicloud.com
-```
-
-如果你不复用已有 Secret，Chart 会默认创建并引用名为 `default-secret` 的镜像拉取 Secret。此时需要在 [values.yaml](/home/chenxi/YS/disaster-system-chart/values.yaml) 中配置 `imagePullSecret.registry`、`imagePullSecret.username` 和 `imagePullSecret.password`。
-
-### 方式 B：离线导入镜像
-
-在一台可访问公网的机器上先拉取并导出镜像：
-
-```bash
-docker login swr.cn-east-3.myhuaweicloud.com
-
-docker pull swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-operator-arm64:v2.0.1
-docker pull swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-server:v2.0.1
-docker pull swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-web:v2.0.0
-
-docker save \
-  swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-operator-arm64:v2.0.1 \
-  swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-server:v2.0.1 \
-  swr.cn-east-3.myhuaweicloud.com/chenmou/disaster-web:v2.0.0 \
-  -o disaster-images.tar
-```
-
-然后在目标节点导入：
-
-```bash
-# Docker
-docker load -i disaster-images.tar
-
-# containerd
-ctr -n k8s.io images import disaster-images.tar
-```
-
-说明：即使是离线导入镜像的场景，你也可以二选一：
-
-- 继续让 Chart 创建 `default-secret`
-- 或设置 `imagePullSecret.existingSecret` 复用集群中已有的拉取凭据
-
-## 5. 安装
-
-确保当前目录下已有 chart 包，例如：
-
-- `disaster-system-2.0.0.tgz`
-
-### 默认安装
-
-先准备一个 values 文件，至少填入镜像仓库凭据，例如：
-
-```yaml
-imagePullSecret:
-  existingSecret: ""
-  registry: swr.cn-east-3.myhuaweicloud.com
-  username: your-username
-  password: your-password
-  email: ""
-```
-
-```bash
-helm install disaster-system ./disaster-system-2.0.0.tgz \
-  -n disaster-system \
-  --create-namespace \
-  -f my-values.yaml
-```
-
-### 复用集群已有 Secret
-
-如果命名空间里已经存在可用的镜像拉取 Secret，例如你的集群里已有 `default-secret`，安装时可以直接指定：
-
-```bash
-helm upgrade --install disaster-system ./disaster-system-2.1.0.tgz \
-  -n disaster-system \
-  --create-namespace \
-  --set imagePullSecret.existingSecret=default-secret
-```
-
-默认安装成功后，可通过以下地址访问前端：
-
-- `http://<NodeIP>:30087`
-
-### 预置 License Secret（可选）
-
-默认不通过 Helm 安装 License。若确实需要把 License 随 Chart 一起安装，可在私有 values 文件中配置：
+默认安装不会创建真实 License Secret，避免把企业授权内容写入通用 values 文件。推荐通过后端接口安装 License，或在私有 values 文件中显式配置：
 
 ```yaml
 license:
   secret:
     create: true
     license: |
-      {"version":1,"licenseId":"LIC-...","product":"disaster-platform"}
+      {"version":1,"licenseId":"LIC-...","product":"testudo"}
 ```
 
-注意：示例中的 JSON 只是结构占位，实际内容必须使用正式签发工具生成，不能使用截断或自签内容。
+License 签发私钥不得写入 Chart、values 文件、镜像或仓库。
 
-### 安装到自定义命名空间
+### `webhook`
 
-如果目标命名空间不是 `disaster-system`，必须同时覆盖 `global.namespace`：
+- `webhook.enabled`: 是否安装 admission webhook，默认 `true`
+- `webhook.certManager.enabled`: 是否使用 cert-manager 生成 webhook serving cert 并注入 CA，默认 `true`
+- `webhook.caBundle`: 当 `webhook.certManager.enabled=false` 时显式提供 CA bundle
+
+如果目标集群没有 cert-manager，可以关闭 webhook 证书自动管理：
 
 ```bash
-helm install disaster-system ./disaster-system-2.0.0.tgz \
-  -n demo \
-  --create-namespace \
-  -f my-values.yaml \
-  --set global.namespace=demo
-```
-
-### 使用自定义 values 文件
-
-以下示例展示如何同时配置镜像拉取凭据、前端对外端口和发布策略：
-
-```yaml
-global:
-  namespace: disaster-system
-
-imagePullSecret:
-  registry: swr.cn-east-3.myhuaweicloud.com
-  username: your-username
-  password: your-password
-  email: ""
-
-web:
-  service:
-    type: NodePort
-    nodePort: 30088
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-
-server:
-  strategy:
-    type: Recreate
-
-operator:
-  strategy:
-    type: RollingUpdate
-```
-
-执行安装：
-
-```bash
-helm install disaster-system ./disaster-system-2.0.0.tgz \
+helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace \
-  -f my-values.yaml
+  --set webhook.certManager.enabled=false
 ```
 
-## 6. 验证
+关闭 cert-manager 后，需要自行准备 webhook TLS Secret 和 `webhook.caBundle`。
+
+## 5. 打包 Chart
 
 ```bash
-helm ls -n disaster-system
-kubectl get pods,svc -n disaster-system
+helm lint .
+helm package .
 ```
 
-如需查看渲染后的资源清单：
+打包后会生成：
+
+```text
+testudo-chart-1.0.0.tgz
+```
+
+该包属于发布产物，不提交到源码分支；GitHub Pages 分支可以保存 `.tgz` 和 `index.yaml`。
+
+## 6. GitHub Pages 托管建议
+
+推荐使用如下分支布局：
+
+- `main`: 保存 Chart 源码
+- `gh-pages`: 保存 `index.yaml` 和 Chart 包
+
+本仓库已包含 GitHub Actions 工作流：
+
+```text
+.github/workflows/publish-helm-chart.yml
+```
+
+推送到 GitHub `main` 分支后，该工作流会自动执行：
+
+1. `helm lint .`
+2. `helm package .`
+3. 生成 Helm repo `index.yaml`
+4. 将 `index.yaml` 和 `testudo-chart-1.0.0.tgz` 发布到 `gh-pages` 分支
+
+GitHub 仓库侧需要在 `Settings -> Pages` 中选择：
+
+```text
+Source: Deploy from a branch
+Branch: gh-pages
+Folder: /
+```
+
+如需手动发布，可使用以下命令：
 
 ```bash
-helm template disaster-system ./disaster-system-2.0.0.tgz -f my-values.yaml
+helm package .
+mkdir -p /tmp/testudo-chart-pages
+cp testudo-chart-1.0.0.tgz /tmp/testudo-chart-pages/
+helm repo index /tmp/testudo-chart-pages \
+  --url https://softcdata.github.io/testudo-chart
 ```
 
-## 7. 升级
-
-修改 values 后执行：
-
-```bash
-helm upgrade disaster-system ./disaster-system-2.0.0.tgz \
-  -n disaster-system \
-  -f my-values.yaml
-```
-
-如果使用的是自定义命名空间，请保持 `global.namespace` 与发布命名空间一致：
-
-```bash
-helm upgrade disaster-system ./disaster-system-2.0.0.tgz \
-  -n demo \
-  -f my-values.yaml \
-  --set global.namespace=demo
-```
-
-## 8. 卸载
-
-```bash
-helm uninstall disaster-system -n disaster-system
-```
-
-说明：该命令会删除当前 Helm Release 管理的资源，但不会自动删除命名空间。
+将 `/tmp/testudo-chart-pages` 的内容推送到 `gh-pages` 分支后，即可通过 `helm repo add` 使用。

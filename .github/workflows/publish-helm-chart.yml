@@ -1,0 +1,80 @@
+name: Publish Helm chart
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - Chart.yaml
+      - values.yaml
+      - templates/**
+      - crds/**
+      - DEPLOYMENT.md
+      - README.md
+      - LICENSE
+      - .helmignore
+      - .github/workflows/publish-helm-chart.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint .
+
+      - name: Build Helm repository content
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p public
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git worktree add /tmp/testudo-chart-gh-pages origin/gh-pages
+            cp -a /tmp/testudo-chart-gh-pages/. public/
+            rm -rf public/.git
+            git worktree remove /tmp/testudo-chart-gh-pages --force
+          fi
+
+          helm package . --destination public
+          chart_repo_url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          if [ -f public/index.yaml ]; then
+            helm repo index public --url "${chart_repo_url}" --merge public/index.yaml
+          else
+            helm repo index public --url "${chart_repo_url}"
+          fi
+
+      - name: Publish to gh-pages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          cd public
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No Helm chart changes to publish."
+            exit 0
+          fi
+
+          git commit -m "Publish Helm chart"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages

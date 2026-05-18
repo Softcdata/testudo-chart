@@ -57,13 +57,13 @@ metadata:
   name: disaster-operator-appbackup-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups/status
   verbs:
@@ -78,7 +78,7 @@ metadata:
   name: disaster-operator-appbackup-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups
   verbs:
@@ -90,7 +90,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups/status
   verbs:
@@ -105,7 +105,7 @@ metadata:
   name: disaster-operator-appbackup-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups
   verbs:
@@ -113,7 +113,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups/status
   verbs:
@@ -128,13 +128,13 @@ metadata:
   name: disaster-operator-apprestore-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores/status
   verbs:
@@ -149,7 +149,7 @@ metadata:
   name: disaster-operator-apprestore-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores
   verbs:
@@ -161,7 +161,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores/status
   verbs:
@@ -176,7 +176,7 @@ metadata:
   name: disaster-operator-apprestore-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores
   verbs:
@@ -184,7 +184,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - apprestores/status
   verbs:
@@ -199,13 +199,13 @@ metadata:
   name: disaster-operator-backuppolicy-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies/status
   verbs:
@@ -220,7 +220,7 @@ metadata:
   name: disaster-operator-backuppolicy-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies
   verbs:
@@ -232,7 +232,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies/status
   verbs:
@@ -247,7 +247,7 @@ metadata:
   name: disaster-operator-backuppolicy-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies
   verbs:
@@ -255,7 +255,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - backuppolicies/status
   verbs:
@@ -270,13 +270,13 @@ metadata:
   name: disaster-operator-cluster-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters/status
   verbs:
@@ -291,7 +291,7 @@ metadata:
   name: disaster-operator-cluster-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters
   verbs:
@@ -303,7 +303,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters/status
   verbs:
@@ -318,7 +318,7 @@ metadata:
   name: disaster-operator-cluster-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters
   verbs:
@@ -326,7 +326,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - clusters/status
   verbs:
@@ -341,13 +341,13 @@ metadata:
   name: disaster-operator-disasterbackup-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups/status
   verbs:
@@ -362,7 +362,7 @@ metadata:
   name: disaster-operator-disasterbackup-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups
   verbs:
@@ -374,7 +374,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups/status
   verbs:
@@ -389,7 +389,7 @@ metadata:
   name: disaster-operator-disasterbackup-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups
   verbs:
@@ -397,7 +397,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterbackups/status
   verbs:
@@ -412,13 +412,13 @@ metadata:
   name: disaster-operator-disasterconfig-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs/status
   verbs:
@@ -433,7 +433,7 @@ metadata:
   name: disaster-operator-disasterconfig-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs
   verbs:
@@ -445,7 +445,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs/status
   verbs:
@@ -460,7 +460,7 @@ metadata:
   name: disaster-operator-disasterconfig-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs
   verbs:
@@ -468,7 +468,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterconfigs/status
   verbs:
@@ -483,13 +483,13 @@ metadata:
   name: disaster-operator-disasterjob-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs/status
   verbs:
@@ -504,7 +504,7 @@ metadata:
   name: disaster-operator-disasterjob-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs
   verbs:
@@ -516,7 +516,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs/status
   verbs:
@@ -531,7 +531,7 @@ metadata:
   name: disaster-operator-disasterjob-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs
   verbs:
@@ -539,7 +539,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterjobs/status
   verbs:
@@ -554,13 +554,13 @@ metadata:
   name: disaster-operator-disasterpolicy-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies/status
   verbs:
@@ -575,7 +575,7 @@ metadata:
   name: disaster-operator-disasterpolicy-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies
   verbs:
@@ -587,7 +587,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies/status
   verbs:
@@ -602,7 +602,7 @@ metadata:
   name: disaster-operator-disasterpolicy-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies
   verbs:
@@ -610,7 +610,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - disasterpolicies/status
   verbs:
@@ -642,7 +642,7 @@ rules:
   - create
   - patch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups
   - apprestores
@@ -669,7 +669,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups/finalizers
   - apprestores/finalizers
@@ -688,7 +688,7 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - appbackups/status
   - apprestores/status
@@ -760,13 +760,13 @@ metadata:
   name: disaster-operator-storagerepository-admin-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories
   verbs:
   - '*'
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories/status
   verbs:
@@ -781,7 +781,7 @@ metadata:
   name: disaster-operator-storagerepository-editor-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories
   verbs:
@@ -793,7 +793,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories/status
   verbs:
@@ -808,7 +808,7 @@ metadata:
   name: disaster-operator-storagerepository-viewer-role
 rules:
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories
   verbs:
@@ -816,7 +816,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - disaster.wuxs.vip
+  - testudo.softcdata.com
   resources:
   - storagerepositories/status
   verbs:
@@ -914,13 +914,20 @@ spec:
         app.kubernetes.io/name: disaster-operator
         control-plane: controller-manager
     spec:
+      {{- if include "disaster-system.useImagePullSecret" . }}
       imagePullSecrets:
         - name: {{ include "disaster-system.imagePullSecretName" . }}
+      {{- end }}
       containers:
       - args:
         - --metrics-bind-address=:8443
         - --leader-elect
         - --health-probe-bind-address=:8081
+        {{ if .Values.webhook.enabled }}
+        - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+        - --webhook-cert-name=tls.crt
+        - --webhook-cert-key=tls.key
+        {{ end }}
         command:
         - /app/manager
         env:
@@ -936,7 +943,14 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
+        {{ if .Values.webhook.enabled }}
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        {{ else }}
         ports: []
+        {{ end }}
         readinessProbe:
           httpGet:
             path: /readyz
@@ -950,7 +964,22 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        {{ if .Values.webhook.enabled }}
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-server-cert
+          readOnly: true
+        {{ else }}
         volumeMounts: []
+        {{ end }}
       serviceAccountName: disaster-operator-controller-manager
       terminationGracePeriodSeconds: 10
+      {{ if .Values.webhook.enabled }}
+      volumes:
+      - name: webhook-server-cert
+        secret:
+          defaultMode: 420
+          secretName: disaster-operator-webhook-server-cert
+      {{ else }}
       volumes: []
+      {{ end }}

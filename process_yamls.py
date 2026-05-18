@@ -15,8 +15,44 @@ namespace_tmpl = '{{ .Values.global.namespace | default "disaster-system" }}'
 timezone_tmpl = '{{ .Values.global.timezone | default "Asia/Shanghai" | quote }}'
 operator_image_tmpl = '{{ .Values.images.operator.repository }}:{{ .Values.images.operator.tag }}'
 server_image_tmpl = '{{ .Values.images.server.repository }}:{{ .Values.images.server.tag }}'
-image_pull_secrets_block = """      imagePullSecrets:
+image_pull_secrets_block = """      {{- if include "disaster-system.useImagePullSecret" . }}
+      imagePullSecrets:
         - name: {{ include "disaster-system.imagePullSecretName" . }}
+      {{- end }}
+"""
+operator_webhook_args_block = """        {{ if .Values.webhook.enabled }}
+        - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+        - --webhook-cert-name=tls.crt
+        - --webhook-cert-key=tls.key
+        {{ end }}
+"""
+operator_webhook_ports_block = """        {{ if .Values.webhook.enabled }}
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        {{ else }}
+        ports: []
+        {{ end }}
+"""
+operator_webhook_volume_mounts_block = """        {{ if .Values.webhook.enabled }}
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-server-cert
+          readOnly: true
+        {{ else }}
+        volumeMounts: []
+        {{ end }}
+"""
+operator_webhook_volumes_block = """      {{ if .Values.webhook.enabled }}
+      volumes:
+      - name: webhook-server-cert
+        secret:
+          defaultMode: 420
+          secretName: disaster-operator-webhook-server-cert
+      {{ else }}
+      volumes: []
+      {{ end }}
 """
 operator_strategy_block = """  {{- with .Values.operator.strategy }}
   strategy:
@@ -73,7 +109,7 @@ def validate_cluster_crd_schema(crd_doc_texts):
         doc = yaml.safe_load(raw_doc_text)
         if not doc or doc.get("kind") != "CustomResourceDefinition":
             continue
-        if doc.get("metadata", {}).get("name") != "clusters.disaster.wuxs.vip":
+        if doc.get("metadata", {}).get("name") != "clusters.testudo.softcdata.com":
             continue
 
         versions = doc.get("spec", {}).get("versions", [])
@@ -89,12 +125,12 @@ def validate_cluster_crd_schema(crd_doc_texts):
         missing = [field for field in required_cluster_status_fields if field not in status_properties]
         if missing:
             raise RuntimeError(
-                "clusters.disaster.wuxs.vip CRD in operator installer is missing status fields: "
+                "clusters.testudo.softcdata.com CRD in operator installer is missing status fields: "
                 + ", ".join(missing)
             )
         return
 
-    raise RuntimeError("clusters.disaster.wuxs.vip CRD was not found in operator installer")
+    raise RuntimeError("clusters.testudo.softcdata.com CRD was not found in operator installer")
 
 
 def split_yaml_document_texts(text):
@@ -199,6 +235,14 @@ def process_operator():
         text = f.read()
     text = text.replace("'{{", "{{").replace("}}'", "}}")
     text = template_timezone_env(text, "operator")
+    text = text.replace(
+        "        - --health-probe-bind-address=:8081\n",
+        "        - --health-probe-bind-address=:8081\n" + operator_webhook_args_block,
+        1,
+    )
+    text = text.replace("        ports: []\n", operator_webhook_ports_block, 1)
+    text = text.replace("        volumeMounts: []\n", operator_webhook_volume_mounts_block, 1)
+    text = text.replace("      volumes: []\n", operator_webhook_volumes_block, 1)
     text = text.replace(
         "spec:\n  replicas: 1\n  selector:\n",
         "spec:\n  replicas: 1\n" + operator_strategy_block + "  selector:\n",

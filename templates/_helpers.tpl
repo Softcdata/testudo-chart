@@ -1,5 +1,15 @@
 {{- define "disaster-system.imagePullSecretName" -}}
-{{- default "default-secret" .Values.imagePullSecret.existingSecret -}}
+{{- if .Values.imagePullSecret.existingSecret -}}
+{{- .Values.imagePullSecret.existingSecret -}}
+{{- else -}}
+{{- default "default-secret" .Values.imagePullSecret.name -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "disaster-system.useImagePullSecret" -}}
+{{- if or .Values.imagePullSecret.existingSecret .Values.imagePullSecret.create -}}
+true
+{{- end -}}
 {{- end -}}
 
 {{- define "disaster-system.namespace" -}}
