@@ -1,0 +1,14 @@
+.git/
+.github/
+.gitignore
+.DS_Store
+*.swp
+*.tmp
+dir/
+dist/
+disaster-system-*/
+testudo-chart-*/
+process_yamls.py
+__pycache__/
+*.pyc
+*.tgz

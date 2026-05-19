@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disaster-web
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+spec:
+  replicas: 1
+  {{- with .Values.web.strategy }}
+  strategy:
+{{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: disaster-web
+  template:
+    metadata:
+      labels:
+        app: disaster-web
+    spec:
+      {{- if include "disaster-system.useImagePullSecret" . }}
+      imagePullSecrets:
+        - name: {{ include "disaster-system.imagePullSecretName" . }}
+      {{- end }}
+      containers:
+        - name: web
+          image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"
+          imagePullPolicy: {{ .Values.images.web.pullPolicy }}
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Asia/Shanghai" | quote }}
+            - name: BACKEND_URL
+              value: "{{ .Values.web.backendUrl }}"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: disaster-web
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}
+spec:
+  type: {{ .Values.web.service.type }}
+  ports:
+    - port: {{ .Values.web.service.port }}
+      targetPort: 80
+      {{- if eq .Values.web.service.type "NodePort" }}
+      nodePort: {{ .Values.web.service.nodePort }}
+      {{- end }}
+  selector:
+    app: disaster-web

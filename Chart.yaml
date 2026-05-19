@@ -1,0 +1,7 @@
+apiVersion: v2
+appVersion: v1.0.0
+description: A Helm chart for deploying Testudo disaster recovery platform components,
+  including operator, server and web interface.
+name: testudo-chart
+type: application
+version: 1.0.0
