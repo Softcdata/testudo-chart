@@ -11,6 +11,7 @@ static/
 *.tmp
 dir/
 dist/
+public/
 disaster-system-*/
 testudo-chart-*/
 process_yamls.py
