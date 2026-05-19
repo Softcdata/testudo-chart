@@ -51,29 +51,29 @@ jobs:
           helm package . --destination public
           cp values-*.yaml public/
           pages_url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
-          cat > public/index.html <<HTML
-          <!doctype html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Testudo Helm Chart Repository</title>
-          </head>
-          <body>
-            <h1>Testudo Helm Chart Repository</h1>
-            <p>This page hosts the Testudo Helm chart repository.</p>
-            <pre><code>helm repo add testudo-chart ${pages_url}
-          helm repo update testudo-chart
-          helm search repo testudo-chart/testudo-chart --versions</code></pre>
-            <ul>
-              <li><a href="./index.yaml">index.yaml</a></li>
-              <li><a href="./testudo-chart-1.0.0.tgz">testudo-chart-1.0.0.tgz</a></li>
-              <li><a href="./values-dockerhub.yaml">values-dockerhub.yaml</a></li>
-              <li><a href="./values-aliyun.yaml">values-aliyun.yaml</a></li>
-            </ul>
-          </body>
-          </html>
-HTML
+          {
+            printf '%s\n' '<!doctype html>'
+            printf '%s\n' '<html lang="en">'
+            printf '%s\n' '<head>'
+            printf '%s\n' '  <meta charset="utf-8">'
+            printf '%s\n' '  <meta name="viewport" content="width=device-width, initial-scale=1">'
+            printf '%s\n' '  <title>Testudo Helm Chart Repository</title>'
+            printf '%s\n' '</head>'
+            printf '%s\n' '<body>'
+            printf '%s\n' '  <h1>Testudo Helm Chart Repository</h1>'
+            printf '%s\n' '  <p>This page hosts the Testudo Helm chart repository.</p>'
+            printf '%s\n' "  <pre><code>helm repo add testudo-chart ${pages_url}"
+            printf '%s\n' 'helm repo update testudo-chart'
+            printf '%s\n' 'helm search repo testudo-chart/testudo-chart --versions</code></pre>'
+            printf '%s\n' '  <ul>'
+            printf '%s\n' '    <li><a href="./index.yaml">index.yaml</a></li>'
+            printf '%s\n' '    <li><a href="./testudo-chart-1.0.0.tgz">testudo-chart-1.0.0.tgz</a></li>'
+            printf '%s\n' '    <li><a href="./values-dockerhub.yaml">values-dockerhub.yaml</a></li>'
+            printf '%s\n' '    <li><a href="./values-aliyun.yaml">values-aliyun.yaml</a></li>'
+            printf '%s\n' '  </ul>'
+            printf '%s\n' '</body>'
+            printf '%s\n' '</html>'
+          } > public/index.html
           # Use raw.githubusercontent.com so the test chart repository works
           # even before GitHub Pages is enabled for the repository.
           chart_repo_url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/gh-pages"
