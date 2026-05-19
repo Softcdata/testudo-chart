@@ -2,6 +2,11 @@
 .github/
 .gitignore
 .DS_Store
+README.md
+README.zh-CN.md
+DEPLOYMENT.md
+static/
+*.png
 *.swp
 *.tmp
 dir/
