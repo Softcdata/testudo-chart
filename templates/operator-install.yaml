@@ -642,6 +642,14 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ''
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - testudo.softcdata.com
   resources:
   - appbackups
