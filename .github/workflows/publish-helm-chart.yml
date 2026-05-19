@@ -49,6 +49,7 @@ jobs:
           fi
 
           helm package . --destination public
+          cp values-*.yaml public/
           # Use raw.githubusercontent.com so the test chart repository works
           # even before GitHub Pages is enabled for the repository.
           chart_repo_url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/gh-pages"
