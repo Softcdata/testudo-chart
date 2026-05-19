@@ -95,6 +95,25 @@ images:
     tag: v1.0.0
 ```
 
+本仓库内置了两份镜像源切换文件：
+
+```bash
+# Docker Hub，等同于默认 values.yaml
+helm upgrade --install testudo . \
+  -n disaster-system \
+  --create-namespace \
+  -f values-dockerhub.yaml
+
+# 阿里云 ACR
+helm upgrade --install testudo . \
+  -n disaster-system \
+  --create-namespace \
+  -f values-aliyun.yaml
+```
+
+如果阿里云 ACR 仓库为私有仓库，先在目标命名空间创建或复用 `kubernetes.io/dockerconfigjson`
+Secret，并追加 `--set imagePullSecret.existingSecret=<pull-secret-name>`。
+
 ### `imagePullSecret`
 
 默认不创建、不引用 imagePullSecret，因为 Docker Hub 公共镜像不需要拉取凭据。
