@@ -931,6 +931,9 @@ spec:
         - --metrics-bind-address=:8443
         - --leader-elect
         - --health-probe-bind-address=:8081
+        - {{ printf "--management-namespace=%s" (include "disaster-system.namespace" .) | quote }}
+        - {{ printf "--license-namespace=%s" (include "disaster-system.licenseNamespace" .) | quote }}
+        - {{ printf "--license-ca-path=%s" (.Values.license.caPath | default "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt") | quote }}
         {{ if .Values.webhook.enabled }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         - --webhook-cert-name=tls.crt
