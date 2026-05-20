@@ -31,6 +31,7 @@ data:
     server:
       host: "0.0.0.0"
       port: {{ .Values.server.service.port }}
+      namespace: {{ include "disaster-system.namespace" . | quote }}
     log:
       level: debug
     jwt:
@@ -38,6 +39,12 @@ data:
       timeout: 24h
       access_expire: 24h
       refresh_expire: 168h
+    swagger:
+      enabled: false
+    license:
+      enabled: {{ .Values.license.enabled }}
+      namespace: {{ include "disaster-system.licenseNamespace" . | quote }}
+      caPath: {{ .Values.license.caPath | default "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" | quote }}
 ---
 # Source: disaster-server/templates/serviceaccount.yaml
 apiVersion: rbac.authorization.k8s.io/v1
