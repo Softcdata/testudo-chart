@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Testudo 是一个面向 Kubernetes 的应用级容灾编排系统。它通过 Kubernetes CRD 保护跨集群应用，同步应用资源和 PVC 数据，准备目标集群 standby 环境，并编排故障切换、反向保护、容灾组和容灾演练。
+Testudo（中文名：玄龟阵）是一个面向 Kubernetes 的应用级容灾编排系统。它通过 Kubernetes CRD 保护跨集群应用，同步应用资源和 PVC 数据，准备目标集群 standby 环境，并编排故障切换、反向保护、容灾组和容灾演练。
 
 它解决的核心问题是：平台团队需要一种可重复、可观察、可审计的方式保护 Kubernetes 应用，在目标集群保持可恢复状态，在故障时完成切换，并能定期验证恢复链路，而不是为每个流程手工拼装 Velero `Backup`、`Restore` 和 `Schedule` 资源。
 
@@ -24,8 +24,8 @@ Testudo 是一个面向 Kubernetes 的应用级容灾编排系统。它通过 Ku
 | --- | --- |
 | [`testudo-operator`](https://github.com/softcdata/testudo-operator) | Kubernetes CRD、admission webhook、控制器、流程状态机，以及对 Kubernetes 和 Velero 资源的实际调谐。 |
 | [`testudo-server`](https://github.com/softcdata/testudo-server) | REST API、Watch API、认证、Swagger/OpenAPI、统计接口，以及面向控制台的聚合接口。 |
-| `testudo-chart` | Helm Chart，用于把 `testudo-operator`、`testudo-server` 和 Web 控制台打包成一个 `disaster-system` 安装包。 |
-| `testudo-web` | Vue/Vite Web 控制台，用于集群注册、存储配置、容灾实例、容灾组、演练和操作流程。 |
+| [`testudo-chart`](https://github.com/Softcdata/testudo-chart) | Helm Chart，用于把 `testudo-operator`、`testudo-server` 和 Web 控制台打包成一个 `disaster-system` 安装包。 |
+| [`testudo-web`](https://github.com/Softcdata/testudo-web) | Vue/Vite Web 控制台，用于集群注册、存储配置、容灾实例、容灾组、演练和操作流程。 |
 
 GitHub 是本项目事实源。如提供 Gitee 仓库，Gitee 用于国内访问加速和同步镜像。
 
@@ -248,20 +248,80 @@ docker build -t <registry>/<namespace>/disaster-server:<tag> .
 
 ### Web 控制台
 
-安装依赖：
+控制台主要能力包括：
+
+- 应用备份与恢复
+- 容灾实例、容灾组配置与操作
+- 容灾演练
+- 集群、备份仓库、灾备策略管理
+- WebSocket 实时状态
+- 中英文国际化
+
+#### 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| 框架 | Vue 3、TypeScript |
+| 构建 | Vite 7 |
+| UI | Naive UI、Tailwind CSS |
+| 状态 | Pinia、TanStack Vue Query |
+| 路由 | Vue Router（hash / history） |
+| 可视化 | ECharts、AntV G6 |
+
+除上文 [本地开发](#本地开发) 中的共用工具外，还需安装 [Node.js](https://nodejs.org/) ≥ 20.19 或 ≥ 22.12，以及 [pnpm](https://pnpm.io/) ≥ 10.17（推荐）。
+
+#### 安装与运行
 
 ```bash
 cd testudo-web
 pnpm install
-```
 
-启动 Vite 开发服务：
+cp .env.example .env.dev
+# 编辑 .env.dev：配置 VITE_BASE_URL、VITE_URL_PROXYS 等指向你的后端
 
-```bash
 pnpm dev
 ```
 
-默认开发端口由 `.env` 控制，当前为 `9009`。API 代理由 `.env.dev` 控制，重点关注 `VITE_BASE_URL`、`VITE_URL_PROXYS` 和 `VITE_API_PREFIX`。本地联调时，把它们指向正在运行的 server，例如 `http://127.0.0.1:8080`。
+浏览器访问 `http://localhost:9009`（或 `.env` 中配置的端口）。本地联调时将开发代理指向正在运行的 `testudo-server`，例如 `http://127.0.0.1:8080`。
+
+#### 常用脚本
+
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm dev` | 开发模式启动 |
+| `pnpm dev:test` | test 模式启动 |
+| `pnpm build:dev` | dev 配置打包 |
+| `pnpm build:test` | test 配置打包 |
+| `pnpm build:staging` | staging 打包 |
+| `pnpm build:prod` | 生产环境打包 |
+| `pnpm preview` | 预览生产构建 |
+| `pnpm type:check` | TypeScript / Vue 类型检查 |
+
+#### 配置说明
+
+将 `.env.example` 复制为 `.env.dev`、`.env.test`、`.env.staging` 或 `.env.prod` 后按需修改。**请勿将真实 `.env*` 提交到仓库。**
+
+| 变量 | 说明 |
+| --- | --- |
+| `VITE_BASE_URL` | 后端或网关地址 |
+| `VITE_URL_PROXYS` | 开发代理（JSON 数组），如 `[["/apis","http://127.0.0.1:8080"]]` |
+| `VITE_API_PREFIX` | API 路径前缀（默认 `/apis`） |
+| `VITE_ROUTER_HISTORY_MODE` | `hash` 或 `history` |
+
+#### 目录结构
+
+```
+src/
+  api/           接口封装
+  views/         业务页面
+  components/    公共组件
+  layout/        布局
+  router/        路由
+  locales/       国际化文案
+  store/         Pinia 状态
+mock/            本地 Mock（开发）
+public/          静态资源与 platform-config.json
+```
 
 构建并预览生产产物：
 
