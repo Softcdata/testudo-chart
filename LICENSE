@@ -200,3 +200,67 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+Appendix: Testudo (Xuan Gui Zhen) Community Edition Supplemental License Terms
+
+Testudo (Chinese name: Xuan Gui Zhen, hereinafter referred to as "the Software") is released by YaoShi Data (Wuhan) Co., Ltd. The Software is open sourced under the Apache License Version 2.0 and may be used for learning, research, internal use, secondary development, integrated deployment, and commercial projects, provided that you comply with the Apache License Version 2.0 and these supplemental terms.
+
+These supplemental terms are intended to clarify the usage boundaries, copyright notices, third-party open source compliance requirements, Community Edition authorization scope, and Enterprise Edition authorization matters for the Software. If these supplemental terms differ from the license terms of any third-party open source component integrated into or depended on by the Software, you must also comply with the applicable license terms of those third-party components.
+
+1. Open Source License
+
+   The Software is released under the Apache License Version 2.0. Subject to compliance with the Apache License Version 2.0 and these supplemental terms, you may use, copy, modify, distribute, and use the Software in commercial projects.
+
+2. Lawful and Compliant Use
+
+   You may not use the Software for any activity that endangers national security, national honor or interests, public security, public interests, or the lawful rights and interests of others. You may not use the Software, in any form, for illegal, non-compliant, fraudulent, offensive, destructive, regulatory-evasion, or other unlawful purposes.
+
+3. Third-Party Open Source Software
+
+   The Software integrates or depends on multiple third-party open source software packages, components, images, or tools. When using, distributing, modifying, or integrating the Software, you must also comply with the license terms, copyright notices, NOTICE files, and other compliance requirements of those third-party open source software projects.
+
+4. Preservation of Copyright Notices and Original Identifiers
+
+   When modifying, distributing, or creating derivative code based on the Software, you must preserve the license notices, copyright notices, author information, NOTICE files, and other statements required by the original authors in the original code, documentation, configuration, and license files.
+
+   Please respect the copyrights of the original authors and contributors. Do not delete, alter, or intentionally obscure Copyright notices, @author information, license notices, NOTICE information, or similar statements in source files.
+
+   Without prior written permission from YaoShi Data (Wuhan) Co., Ltd., you may not globally replace, delete, or obscure original identifiers such as softcdata, Testudo, or Xuan Gui Zhen in source code, documentation, package names, module names, or project descriptions for the purpose of avoiding copyright attribution, misleading users about the project origin, or confusing brand relationships. Any legal liability arising from such conduct shall be borne by the relevant actor.
+
+5. Reference, Reuse, and Derivative Notices
+
+   If your software, product, service, documentation, website, or other public material references, reuses, adapts, or is based on any part of the Software's code, architecture design, functional implementation, or documentation, you should retain a source attribution notice in the relevant source files, documentation, or a prominent position in your software introduction, and respect the Software's copyright and author statements.
+
+   Recommended attribution:
+
+   "This project/product references or uses portions of the code, design, or functionality of Testudo (Xuan Gui Zhen), originally released by YaoShi Data (Wuhan) Co., Ltd."
+
+6. Limitation of Liability
+
+   You are solely responsible for all risks, disputes, losses, compliance responsibilities, and legal liabilities arising from downloading, installing, deploying, using, modifying, distributing, integrating, operating, or secondarily developing the Software.
+
+   To the maximum extent permitted by law, YaoShi Data (Wuhan) Co., Ltd. shall not be liable for any direct, indirect, incidental, special, punitive, or consequential damages arising from the use of or inability to use the Software, including but not limited to business interruption, data loss, system failure, loss of revenue, third-party claims, or compliance risks.
+
+7. Community Contributions
+
+   If you improve, fix, optimize, or extend the Software, you are welcome to contribute back through issues, pull requests, patches, documentation feedback, or other appropriate means. We encourage open collaboration and joint improvement of the Software ecosystem, subject to the project's contribution guidelines and applicable open source license requirements.
+
+8. Software Copyright Registration
+
+   This project has applied for software copyright registration. Please respect open source, originality, and the work of contributors, and comply with applicable laws and regulations, the Apache License Version 2.0, and these supplemental terms.
+
+9. Community Edition Scope
+
+   The Community Edition of the Software does not limit the number of users or concurrent online users, and may be used for learning, testing, validation, internal use, and project scenarios that comply with these supplemental terms.
+
+   The Software uses a License mechanism to manage certain authorization capabilities and the manageable cluster scale. The Community Edition may be used free of charge within the default authorization scope. If you need to manage more clusters, obtain an Enterprise Edition license, use enterprise-level features, receive commercial support, obtain SLA services, request customization, or obtain other commercial authorization, please contact YaoShi Data (Wuhan) Co., Ltd.
+
+10. Enterprise Edition and Commercial Authorization
+
+   The Community Edition and Enterprise Edition may differ in manageable cluster scale, enterprise-level features, technical support, service guarantees, upgrade and maintenance services, authorization methods, and other aspects. If you need expanded cluster management capabilities or an Enterprise Edition license, please contact us through the contact information below.
+
+Copyright: YaoShi Data (Wuhan) Co., Ltd.
+
+Official website: https://testudo.softcdata.com/
+
+Contact: chenhao@softcdata.com
