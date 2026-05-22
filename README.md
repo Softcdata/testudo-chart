@@ -1,8 +1,8 @@
 # Testudo
 
-[English](README.md) | [Simplified Chinese](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-Testudo is a Kubernetes application-level disaster recovery orchestration system. It protects workloads across Kubernetes clusters by synchronizing application resources and PVC data, preparing standby environments, and coordinating failover, reverse protection, disaster recovery groups, and drills through Kubernetes CRDs.
+Testudo (Chinese name: 玄龟阵) is a Kubernetes application-level disaster recovery orchestration system. It protects workloads across Kubernetes clusters by synchronizing application resources and PVC data, preparing standby environments, and coordinating failover, reverse protection, disaster recovery groups, and drills through Kubernetes CRDs.
 
 It solves a practical platform problem: teams need a repeatable way to protect Kubernetes applications, keep a target cluster recoverable, switch applications during failures, and verify recovery paths without manually assembling Velero `Backup`, `Restore`, and `Schedule` resources for every workflow.
 
@@ -24,8 +24,8 @@ This README is intended to be shared by the Testudo runtime projects. A complete
 | --- | --- |
 | [`testudo-operator`](https://github.com/softcdata/testudo-operator) | Kubernetes CRDs, admission webhook, controllers, workflow state machines, and reconciliation against Kubernetes and Velero resources. |
 | [`testudo-server`](https://github.com/softcdata/testudo-server) | REST API, Watch API, authentication, Swagger/OpenAPI, statistics, and console-facing aggregation. |
-| `testudo-chart` | Helm Chart for installing `testudo-operator`, `testudo-server`, and the web console as one `disaster-system` release. |
-| `testudo-web` | Vue/Vite web console for cluster registration, storage configuration, disaster instances, groups, drills, and operations. |
+| [`testudo-chart`](https://github.com/Softcdata/testudo-chart) | Helm Chart for installing `testudo-operator`, `testudo-server`, and the web console as one `disaster-system` release. |
+| [`testudo-web`](https://github.com/Softcdata/testudo-web) | Vue/Vite web console for cluster registration, storage configuration, disaster instances, groups, drills, and operations. |
 
 GitHub is the source of truth. Gitee repositories, when provided, are synchronization mirrors for users who need domestic access in China.
 
