@@ -88,7 +88,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: {{ add (int (default 120 .Values.uninstallCleanup.timeoutSeconds)) 60 }}
+  activeDeadlineSeconds: {{ add (int (default 480 .Values.uninstallCleanup.timeoutSeconds)) 60 }}
   template:
     metadata:
       labels:
@@ -107,7 +107,7 @@ spec:
         imagePullPolicy: {{ .Values.uninstallCleanup.kubectlImage.pullPolicy }}
         env:
         - name: CLEANUP_TIMEOUT
-          value: "{{ default 120 .Values.uninstallCleanup.timeoutSeconds }}s"
+          value: "{{ default 480 .Values.uninstallCleanup.timeoutSeconds }}s"
         command:
         - /bin/sh
         - -c

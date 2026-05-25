@@ -202,7 +202,7 @@ helm upgrade --install testudo testudo/testudo-chart \
 - `uninstallCleanup.enabled`: 是否创建卸载清理 hook，默认 `false`
 - `uninstallCleanup.deleteTestudoCrds`: 清理 Testudo CRD，默认 `true`
 - `uninstallCleanup.deleteVeleroCrds`: 清理 Velero CRD，默认 `false`
-- `uninstallCleanup.timeoutSeconds`: 单个 CRD 删除等待超时时间，默认 `120`
+- `uninstallCleanup.timeoutSeconds`: 单个 CRD 删除等待超时时间，默认 `480`
 - `uninstallCleanup.kubectlImage`: 清理 Job 使用的 kubectl 镜像
 
 注意：删除 CRD 会删除对应的全部 CR 实例数据。Velero CRD 可能由集群内其他 Velero 安装共享，只有确认不再需要时才开启 `uninstallCleanup.deleteVeleroCrds=true`。

@@ -73,7 +73,7 @@ uninstallCleanup:
   deleteTestudoCrds: true
   # Velero CRD 可能由集群内其他组件共享，默认不随 Testudo 卸载删除。
   deleteVeleroCrds: false
-  timeoutSeconds: 120
+  timeoutSeconds: 480
   kubectlImage:
     repository: docker.io/dtzar/helm-kubectl
     tag: "3.17.3"
