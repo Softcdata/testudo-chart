@@ -1,0 +1,186 @@
+{{- if and .Values.uninstallCleanup.enabled (or .Values.uninstallCleanup.deleteTestudoCrds .Values.uninstallCleanup.deleteVeleroCrds) }}
+{{- $namespace := include "disaster-system.namespace" . -}}
+{{- $name := printf "%s-crd-cleanup" .Release.Name | trunc 63 | trimSuffix "-" -}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ $namespace }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-100"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-100"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - testudo.softcdata.com
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - delete
+{{- if .Values.uninstallCleanup.deleteVeleroCrds }}
+- apiGroups:
+  - velero.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - delete
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-100"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $name }}
+  namespace: {{ $namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  namespace: {{ $namespace }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-90"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ add (int (default 120 .Values.uninstallCleanup.timeoutSeconds)) 60 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: testudo-crd-cleanup
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ $name }}
+      {{- if include "disaster-system.useImagePullSecret" . }}
+      imagePullSecrets:
+      - name: {{ include "disaster-system.imagePullSecretName" . }}
+      {{- end }}
+      containers:
+      - name: kubectl
+        image: "{{ .Values.uninstallCleanup.kubectlImage.repository }}:{{ .Values.uninstallCleanup.kubectlImage.tag }}"
+        imagePullPolicy: {{ .Values.uninstallCleanup.kubectlImage.pullPolicy }}
+        env:
+        - name: CLEANUP_TIMEOUT
+          value: "{{ default 120 .Values.uninstallCleanup.timeoutSeconds }}s"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+
+          cleanup_crd() {
+            crd="$1"
+            if ! kubectl get crd "$crd" >/dev/null 2>&1; then
+              echo "CRD $crd not found, skip"
+              return 0
+            fi
+
+            echo "Remove finalizers from instances of $crd"
+            kubectl get "$crd" -A --ignore-not-found --no-headers \
+              -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name' 2>/dev/null \
+              | while read -r namespace name _; do
+                  [ -n "${name:-}" ] || continue
+                  [ "${namespace:-}" != "No" ] || continue
+                  if [ "${namespace:-}" = "<none>" ] || [ -z "${namespace:-}" ]; then
+                    kubectl patch "$crd" "$name" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+                  else
+                    kubectl -n "$namespace" patch "$crd" "$name" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+                  fi
+                done
+
+            echo "Delete CRD $crd"
+            kubectl delete crd "$crd" --ignore-not-found=true --wait=true --timeout="$CLEANUP_TIMEOUT"
+          }
+
+          echo "Delete Testudo validating webhook before CRD cleanup"
+          kubectl delete validatingwebhookconfiguration disaster-operator-validating-webhook-configuration --ignore-not-found=true
+
+          {{- if .Values.uninstallCleanup.deleteTestudoCrds }}
+          for crd in \
+            appbackups.testudo.softcdata.com \
+            apprestores.testudo.softcdata.com \
+            backuppolicies.testudo.softcdata.com \
+            backuprestorestatisticses.testudo.softcdata.com \
+            clusters.testudo.softcdata.com \
+            datasyncs.testudo.softcdata.com \
+            disasterbackups.testudo.softcdata.com \
+            disasterconfigs.testudo.softcdata.com \
+            disasterdrills.testudo.softcdata.com \
+            disastergroups.testudo.softcdata.com \
+            disasterinstances.testudo.softcdata.com \
+            disasterjobs.testudo.softcdata.com \
+            disasteroperations.testudo.softcdata.com \
+            disasterpolicies.testudo.softcdata.com \
+            resourcesyncs.testudo.softcdata.com \
+            storagerepositories.testudo.softcdata.com
+          do
+            cleanup_crd "$crd"
+          done
+          {{- end }}
+
+          {{- if .Values.uninstallCleanup.deleteVeleroCrds }}
+          for crd in \
+            backuprepositories.velero.io \
+            backupstoragelocations.velero.io \
+            backups.velero.io \
+            datadownloads.velero.io \
+            datauploads.velero.io \
+            deletebackuprequests.velero.io \
+            downloadrequests.velero.io \
+            podvolumebackups.velero.io \
+            podvolumerestores.velero.io \
+            restores.velero.io \
+            schedules.velero.io \
+            serverstatusrequests.velero.io \
+            volumesnapshotlocations.velero.io
+          do
+            cleanup_crd "$crd"
+          done
+          {{- end }}
+{{- end }}

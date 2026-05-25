@@ -64,3 +64,17 @@ webhook:
   certManager:
     enabled: true
   caBundle: ""
+
+# Helm 默认不会在 uninstall 时删除 crds/ 目录下安装的 CRD。
+# 如需卸载时一并删除 Testudo CRD，可显式开启该清理 hook。
+# 注意：删除 CRD 会删除对应的全部 CR 实例数据。
+uninstallCleanup:
+  enabled: false
+  deleteTestudoCrds: true
+  # Velero CRD 可能由集群内其他组件共享，默认不随 Testudo 卸载删除。
+  deleteVeleroCrds: false
+  timeoutSeconds: 120
+  kubectlImage:
+    repository: docker.io/bitnami/kubectl
+    tag: "1.32.4"
+    pullPolicy: IfNotPresent

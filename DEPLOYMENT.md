@@ -188,6 +188,25 @@ helm upgrade --install testudo testudo/testudo-chart \
 
 关闭 cert-manager 后，需要自行准备 webhook TLS Secret 和 `webhook.caBundle`。
 
+### `uninstallCleanup`
+
+Helm 默认不会在 `helm uninstall` 时删除 `crds/` 目录安装的 CRD。若需要卸载时删除 Testudo CRD，可显式开启 pre-delete 清理 hook：
+
+```bash
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace \
+  --set uninstallCleanup.enabled=true
+```
+
+- `uninstallCleanup.enabled`: 是否创建卸载清理 hook，默认 `false`
+- `uninstallCleanup.deleteTestudoCrds`: 清理 Testudo CRD，默认 `true`
+- `uninstallCleanup.deleteVeleroCrds`: 清理 Velero CRD，默认 `false`
+- `uninstallCleanup.timeoutSeconds`: 单个 CRD 删除等待超时时间，默认 `120`
+- `uninstallCleanup.kubectlImage`: 清理 Job 使用的 kubectl 镜像
+
+注意：删除 CRD 会删除对应的全部 CR 实例数据。Velero CRD 可能由集群内其他 Velero 安装共享，只有确认不再需要时才开启 `uninstallCleanup.deleteVeleroCrds=true`。
+
 ## 5. 打包 Chart
 
 ```bash
