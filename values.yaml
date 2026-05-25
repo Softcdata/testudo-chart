@@ -75,6 +75,6 @@ uninstallCleanup:
   deleteVeleroCrds: false
   timeoutSeconds: 120
   kubectlImage:
-    repository: docker.io/rancher/kubectl
-    tag: "v1.32.9"
+    repository: docker.io/dtzar/helm-kubectl
+    tag: "3.17.3"
     pullPolicy: IfNotPresent
