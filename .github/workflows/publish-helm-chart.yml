@@ -74,9 +74,7 @@ jobs:
             printf '%s\n' '</body>'
             printf '%s\n' '</html>'
           } > public/index.html
-          # Use raw.githubusercontent.com so the test chart repository works
-          # even before GitHub Pages is enabled for the repository.
-          chart_repo_url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/gh-pages"
+          chart_repo_url="${pages_url}"
           if [ -f public/index.yaml ]; then
             helm repo index public --url "${chart_repo_url}" --merge public/index.yaml
           else
