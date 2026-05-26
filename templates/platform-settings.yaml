@@ -1,0 +1,32 @@
+apiVersion: v1
+data:
+  settings: |-
+    {
+      "schemaVersion": 1,
+      "items": {
+        "system.copyright.notice": {
+          "name": "平台版权说明",
+          "config_key": "system.copyright.notice",
+          "value": "Softc 2026.V.1.0.0",
+          "remark": ""
+        },
+        "system.english.title": {
+          "name": "英文标题",
+          "config_key": "system.english.title",
+          "value": "Containerized Disaster Recovery Software",
+          "remark": ""
+        },
+        "system.title": {
+          "name": "中文标题",
+          "config_key": "system.title",
+          "value": "容器化灾备软件",
+          "remark": ""
+        }
+      },
+      "updatedAt": "2026-05-25T08:02:44Z",
+      "updatedBy": "system"
+    }
+kind: ConfigMap
+metadata:
+  name: disaster-platform-settings
+  namespace: {{ .Values.global.namespace | default "disaster-system" }}

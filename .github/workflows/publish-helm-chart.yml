@@ -1,0 +1,94 @@
+name: Publish Helm chart
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - Chart.yaml
+      - values*.yaml
+      - templates/**
+      - crds/**
+      - DEPLOYMENT.md
+      - README.md
+      - LICENSE
+      - .helmignore
+      - .github/workflows/publish-helm-chart.yml
+
+permissions:
+  contents: write
+
+env:
+  HELM_REPO_RELEASE_TAG: helm-repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint .
+
+      - name: Build Helm release repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p public
+          repo_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${HELM_REPO_RELEASE_TAG}"
+
+          helm package . --destination public
+          chart_name="$(awk -F': *' '$1 == "name" {print $2; exit}' Chart.yaml)"
+          chart_version="$(awk -F': *' '$1 == "version" {print $2; exit}' Chart.yaml)"
+          chart_package="${chart_name}-${chart_version}.tgz"
+          if compgen -G "values*.yaml" >/dev/null; then
+            cp values*.yaml public/
+          fi
+
+          if gh release view "${HELM_REPO_RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release download "${HELM_REPO_RELEASE_TAG}" \
+              --pattern index.yaml \
+              --dir public || true
+          fi
+
+          if [ -f public/index.yaml ]; then
+            helm repo index public --url "${repo_url}" --merge public/index.yaml
+          else
+            helm repo index public --url "${repo_url}"
+          fi
+
+          printf 'chart_name=%s\n' "${chart_name}" >> "${GITHUB_ENV}"
+          printf 'chart_version=%s\n' "${chart_version}" >> "${GITHUB_ENV}"
+          printf 'chart_package=%s\n' "${chart_package}" >> "${GITHUB_ENV}"
+
+      - name: Publish to GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if ! gh release view "${HELM_REPO_RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${HELM_REPO_RELEASE_TAG}" \
+              --title "Helm Chart Repository" \
+              --notes "Stable Helm repository assets for ${GITHUB_REPOSITORY}."
+          fi
+
+          assets=(public/index.yaml "public/${chart_package}")
+          if compgen -G "public/values*.yaml" >/dev/null; then
+            while IFS= read -r values_file; do
+              assets+=("${values_file}")
+            done < <(find public -maxdepth 1 -type f -name 'values*.yaml' | sort)
+          fi
+
+          gh release upload "${HELM_REPO_RELEASE_TAG}" "${assets[@]}" --clobber
