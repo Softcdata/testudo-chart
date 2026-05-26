@@ -1,0 +1,100 @@
+{{- if .Values.webhook.enabled }}
+{{- $namespace := include "disaster-system.namespace" . -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: disaster-operator-webhook-service
+  namespace: {{ $namespace }}
+  labels:
+    app.kubernetes.io/name: disaster-operator
+    control-plane: controller-manager
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    app.kubernetes.io/name: disaster-operator
+    control-plane: controller-manager
+{{- if .Values.webhook.certManager.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: disaster-operator-selfsigned-issuer
+  namespace: {{ $namespace }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: disaster-operator-serving-cert
+  namespace: {{ $namespace }}
+spec:
+  dnsNames:
+  - disaster-operator-webhook-service.{{ $namespace }}.svc
+  - disaster-operator-webhook-service.{{ $namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: disaster-operator-selfsigned-issuer
+  secretName: disaster-operator-webhook-server-cert
+{{- end }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: disaster-operator-validating-webhook-configuration
+  {{- if .Values.webhook.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s" $namespace "disaster-operator-serving-cert" | quote }}
+  {{- end }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: disaster-operator-webhook-service
+      namespace: {{ $namespace }}
+      path: /validate-testudo-softcdata-com-v1-cluster
+  {{- if and (not .Values.webhook.certManager.enabled) .Values.webhook.caBundle }}
+    caBundle: {{ .Values.webhook.caBundle | quote }}
+  {{- end }}
+  failurePolicy: Fail
+  name: vcluster.kb.io
+  rules:
+  - apiGroups:
+    - testudo.softcdata.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - clusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: disaster-operator-webhook-service
+      namespace: {{ $namespace }}
+      path: /validate-testudo-softcdata-com-v1-disasterinstance
+  {{- if and (not .Values.webhook.certManager.enabled) .Values.webhook.caBundle }}
+    caBundle: {{ .Values.webhook.caBundle | quote }}
+  {{- end }}
+  failurePolicy: Fail
+  name: vdisasterinstance.kb.io
+  rules:
+  - apiGroups:
+    - testudo.softcdata.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - disasterinstances
+  sideEffects: None
+{{- end }}

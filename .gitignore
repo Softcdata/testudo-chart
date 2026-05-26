@@ -1,0 +1,10 @@
+*.tgz
+*.tar
+*.tar.gz
+*.tar.xz
+*.zip
+disaster-system-*/
+testudo-chart-*/
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,80 @@
+global:
+  namespace: disaster-system
+  timezone: Asia/Shanghai
+
+# 镜像拉取 Secret 配置。默认使用 Docker Hub 公共镜像，不创建、不引用 Secret。
+imagePullSecret:
+  # 私有镜像仓库才需要开启 create，或通过 existingSecret 复用已有 docker-registry Secret
+  create: false
+  name: default-secret
+  existingSecret: ""
+  registry: ""
+  username: ""
+  password: ""
+  email: ""
+
+# 项目镜像统一配置
+images:
+  operator:
+    repository: docker.io/softcdata/testudo-operator
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  server:
+    repository: docker.io/softcdata/testudo-server
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  web:
+    repository: docker.io/softcdata/testudo-web
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+
+operator:
+  strategy: {}
+
+# Web 端专有配置
+web:
+  # 使用 K8s 内部 CoreDNS 名称，供 disaster-web 代理转发到 disaster-server
+  backendUrl: "http://disaster-server:30081"
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30087
+  strategy: {}
+
+# Server 端专有配置（ClusterIP 仅集群内访问，由 web 代理对外提供服务）
+server:
+  service:
+    type: ClusterIP
+    port: 30081
+  strategy: {}
+
+license:
+  enabled: true
+  namespace: ""
+  caPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  secret:
+    create: false
+    name: disaster-platform-license
+    license: ""
+  statusReader:
+    enabled: false
+
+webhook:
+  enabled: true
+  certManager:
+    enabled: true
+  caBundle: ""
+
+# Helm 默认不会在 uninstall 时删除 crds/ 目录下安装的 CRD。
+# 如需卸载时一并删除 Testudo CRD，可显式开启该清理 hook。
+# 注意：删除 CRD 会删除对应的全部 CR 实例数据。
+uninstallCleanup:
+  enabled: false
+  deleteTestudoCrds: true
+  # Velero CRD 可能由集群内其他组件共享，默认不随 Testudo 卸载删除。
+  deleteVeleroCrds: false
+  timeoutSeconds: 480
+  kubectlImage:
+    repository: docker.io/dtzar/helm-kubectl
+    tag: "3.17.3"
+    pullPolicy: IfNotPresent

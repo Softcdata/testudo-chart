@@ -1,0 +1,27 @@
+# Docker Hub image profile.
+#
+# Usage:
+#   helm upgrade --install testudo . -n disaster-system --create-namespace -f values-dockerhub.yaml
+#
+# This is also the default image set in values.yaml.
+imagePullSecret:
+  create: false
+  existingSecret: ""
+  registry: ""
+  username: ""
+  password: ""
+  email: ""
+
+images:
+  operator:
+    repository: docker.io/softcdata/testudo-operator
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  server:
+    repository: docker.io/softcdata/testudo-server
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  web:
+    repository: docker.io/softcdata/testudo-web
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
