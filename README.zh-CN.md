@@ -370,6 +370,8 @@ helm upgrade --install testudo ./testudo-chart-1.0.0.tgz \
   --create-namespace
 ```
 
+注意：Helm 不会在 `helm upgrade` 时更新已经存在的 `crds/` 目录 CRD。如果本次发布只更新 CRD，请从线上 Chart 包中取出 `crds/operator-crds.yaml` 和 `crds/velero-crds.yaml`，执行 `kubectl apply --server-side --force-conflicts -f ...` 并等待 CRD `Established=True`。如果同时更新 CRD 和 runtime 资源，先 apply CRD，再执行 `helm upgrade`。
+
 私有镜像仓库建议复用已有的 `kubernetes.io/dockerconfigjson` Secret，也可以显式创建：
 
 ```bash

@@ -57,7 +57,42 @@ helm repo update
 http://<NodeIP>:30087
 ```
 
-## 3. 从源码目录本地安装
+## 3. CRD 更新与升级
+
+Helm 对 Chart `crds/` 目录有特殊处理：安装时会创建 CRD，但 `helm upgrade` 不会自动更新集群中已经存在的 CRD。如果新版本只更新了 `crds/operator-crds.yaml` 或 `crds/velero-crds.yaml`，不需要执行 `helm upgrade`，只需要从线上 Chart 包中取出 CRD 并 apply：
+
+```bash
+helm repo update
+helm pull testudo/testudo-chart --version 1.0.0 --untar --untardir /tmp/testudo-chart-crds
+
+kubectl apply --server-side --force-conflicts \
+  -f /tmp/testudo-chart-crds/testudo-chart/crds/operator-crds.yaml
+kubectl apply --server-side --force-conflicts \
+  -f /tmp/testudo-chart-crds/testudo-chart/crds/velero-crds.yaml
+
+kubectl wait --for condition=Established --timeout=120s crd \
+  appbackups.testudo.softcdata.com \
+  apprestores.testudo.softcdata.com \
+  disasterinstances.testudo.softcdata.com \
+  disasterconfigs.testudo.softcdata.com \
+  resourcesyncs.testudo.softcdata.com \
+  backups.velero.io \
+  restores.velero.io \
+  schedules.velero.io
+```
+
+如果发布同时包含 CRD 和 Deployment、Service、RBAC、Webhook、镜像 tag、values 等 runtime 资源变更，应先 apply CRD 并等待 `Established=True`，再执行 `helm upgrade`：
+
+```bash
+helm upgrade testudo testudo/testudo-chart \
+  -n disaster-system \
+  --reset-then-reuse-values \
+  --wait --timeout 10m
+```
+
+不要依赖 `helm upgrade` 更新已有 CRD schema；否则新字段可能被 API server 拒绝或裁剪，导致 controller、webhook、server 与 CRD schema 不一致。
+
+## 4. 从源码目录本地安装
 
 也可以从当前源码目录直接安装：
 
@@ -74,7 +109,7 @@ helm lint .
 helm template testudo . > /tmp/testudo-chart-rendered.yaml
 ```
 
-## 4. 关键配置项
+## 5. 关键配置项
 
 ### `global`
 
@@ -223,7 +258,7 @@ helm upgrade --install testudo testudo/testudo-chart \
 
 注意：删除 CRD 会删除对应的全部 CR 实例数据。Velero CRD 可能由集群内其他 Velero 安装共享，只有确认不再需要时才开启 `uninstallCleanup.deleteVeleroCrds=true`。
 
-## 5. 打包 Chart
+## 6. 打包 Chart
 
 ```bash
 helm lint .
@@ -238,7 +273,7 @@ testudo-chart-1.0.0.tgz
 
 该包属于发布产物，不提交到源码分支；发布工作流会把 `.tgz`、`index.yaml` 和 `values*.yaml` 上传为 GitHub Release assets。
 
-## 6. GitHub Releases 托管
+## 7. GitHub Releases 托管
 
 推荐使用如下布局：
 
