@@ -19,6 +19,9 @@ on:
 permissions:
   contents: write
 
+env:
+  HELM_REPO_RELEASE_TAG: helm-repo
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -34,72 +37,58 @@ jobs:
       - name: Lint chart
         run: helm lint .
 
-      - name: Build Helm repository content
+      - name: Build Helm release repository
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
           mkdir -p public
-          git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
-          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
-            git worktree add /tmp/testudo-chart-gh-pages origin/gh-pages
-            cp -a /tmp/testudo-chart-gh-pages/. public/
-            rm -rf public/.git
-            git worktree remove /tmp/testudo-chart-gh-pages --force
-          fi
+          repo_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${HELM_REPO_RELEASE_TAG}"
 
           helm package . --destination public
-          cp values-*.yaml public/
-          pages_url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
-          {
-            printf '%s\n' '<!doctype html>'
-            printf '%s\n' '<html lang="en">'
-            printf '%s\n' '<head>'
-            printf '%s\n' '  <meta charset="utf-8">'
-            printf '%s\n' '  <meta name="viewport" content="width=device-width, initial-scale=1">'
-            printf '%s\n' '  <title>Testudo Helm Chart Repository</title>'
-            printf '%s\n' '</head>'
-            printf '%s\n' '<body>'
-            printf '%s\n' '  <h1>Testudo Helm Chart Repository</h1>'
-            printf '%s\n' '  <p>This page hosts the Testudo Helm chart repository.</p>'
-            printf '%s\n' "  <pre><code>helm repo add testudo-chart ${pages_url}"
-            printf '%s\n' 'helm repo update testudo-chart'
-            printf '%s\n' 'helm search repo testudo-chart/testudo-chart --versions</code></pre>'
-            printf '%s\n' '  <ul>'
-            printf '%s\n' '    <li><a href="./index.yaml">index.yaml</a></li>'
-            printf '%s\n' '    <li><a href="./testudo-chart-1.0.0.tgz">testudo-chart-1.0.0.tgz</a></li>'
-            printf '%s\n' '    <li><a href="./values-dockerhub.yaml">values-dockerhub.yaml</a></li>'
-            printf '%s\n' '    <li><a href="./values-aliyun.yaml">values-aliyun.yaml</a></li>'
-            printf '%s\n' '  </ul>'
-            printf '%s\n' '</body>'
-            printf '%s\n' '</html>'
-          } > public/index.html
-          chart_repo_url="${pages_url}"
-          if [ -f public/index.yaml ]; then
-            helm repo index public --url "${chart_repo_url}" --merge public/index.yaml
-          else
-            helm repo index public --url "${chart_repo_url}"
+          chart_name="$(awk -F': *' '$1 == "name" {print $2; exit}' Chart.yaml)"
+          chart_version="$(awk -F': *' '$1 == "version" {print $2; exit}' Chart.yaml)"
+          chart_package="${chart_name}-${chart_version}.tgz"
+          if compgen -G "values*.yaml" >/dev/null; then
+            cp values*.yaml public/
           fi
 
-      - name: Publish to gh-pages
+          if gh release view "${HELM_REPO_RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release download "${HELM_REPO_RELEASE_TAG}" \
+              --pattern index.yaml \
+              --dir public || true
+          fi
+
+          if [ -f public/index.yaml ]; then
+            helm repo index public --url "${repo_url}" --merge public/index.yaml
+          else
+            helm repo index public --url "${repo_url}"
+          fi
+
+          printf 'chart_name=%s\n' "${chart_name}" >> "${GITHUB_ENV}"
+          printf 'chart_version=%s\n' "${chart_version}" >> "${GITHUB_ENV}"
+          printf 'chart_package=%s\n' "${chart_package}" >> "${GITHUB_ENV}"
+
+      - name: Publish to GitHub Releases
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          cd public
-          git init
-          git checkout -b gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-
-          if git diff --cached --quiet; then
-            echo "No Helm chart changes to publish."
-            exit 0
+          if ! gh release view "${HELM_REPO_RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${HELM_REPO_RELEASE_TAG}" \
+              --title "Helm Chart Repository" \
+              --notes "Stable Helm repository assets for ${GITHUB_REPOSITORY}."
           fi
 
-          git commit -m "Publish Helm chart"
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force origin gh-pages
+          assets=(public/index.yaml "public/${chart_package}")
+          if compgen -G "public/values*.yaml" >/dev/null; then
+            while IFS= read -r values_file; do
+              assets+=("${values_file}")
+            done < <(find public -maxdepth 1 -type f -name 'values*.yaml' | sort)
+          fi
+
+          gh release upload "${HELM_REPO_RELEASE_TAG}" "${assets[@]}" --clobber

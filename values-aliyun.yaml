@@ -2,16 +2,6 @@
 #
 # Usage:
 #   helm upgrade --install testudo . -n disaster-system --create-namespace -f values-aliyun.yaml
-#
-# If the ACR repository is private, create or reuse a kubernetes.io/dockerconfigjson
-# Secret and set imagePullSecret.existingSecret below or via --set.
-imagePullSecret:
-  create: false
-  existingSecret: ""
-  registry: crpi-ftcmc8yukyvoj8qy.cn-hangzhou.personal.cr.aliyuncs.com
-  username: ""
-  password: ""
-  email: ""
 
 images:
   operator:

@@ -19,17 +19,36 @@
 - Helm 版本为 v3 或以上
 - 如启用默认 webhook 配置，目标集群需要已安装 cert-manager
 
-## 2. 使用 GitHub Pages Helm 仓库安装
+## 2. 使用 GitHub Releases Helm 仓库安装
 
-GitHub Pages 启用后，用户可以通过以下方式安装：
+本仓库通过 GitHub Releases 托管 Helm Chart，不依赖 GitHub Pages。用户可以通过以下方式安装：
 
 ```bash
-helm repo add testudo https://softcdata.github.io/testudo-chart
+helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
 helm repo update
 
 helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace
+```
+
+默认安装会从 Docker Hub 拉取公共镜像。国内网络可以使用随 release 一起发布的阿里云 ACR 公共镜像 values 文件加速拉取：
+
+```bash
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace \
+  -f https://github.com/Softcdata/testudo-chart/releases/download/helm-repo/values-aliyun.yaml
+```
+
+如果仓库不是公开仓库，需要使用有仓库读取权限的 GitHub token：
+
+```bash
+helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo \
+  --username <github-user> \
+  --password <github-token> \
+  --pass-credentials
+helm repo update
 ```
 
 默认安装完成后，可通过以下地址访问 Web 控制台：
@@ -40,7 +59,7 @@ http://<NodeIP>:30087
 
 ## 3. 从源码目录本地安装
 
-如果还没有启用 GitHub Pages，也可以从当前源码目录直接安装：
+也可以从当前源码目录直接安装：
 
 ```bash
 helm upgrade --install testudo . \
@@ -104,15 +123,12 @@ helm upgrade --install testudo . \
   --create-namespace \
   -f values-dockerhub.yaml
 
-# 阿里云 ACR
+# 阿里云 ACR 公共镜像
 helm upgrade --install testudo . \
   -n disaster-system \
   --create-namespace \
   -f values-aliyun.yaml
 ```
-
-如果阿里云 ACR 仓库为私有仓库，先在目标命名空间创建或复用 `kubernetes.io/dockerconfigjson`
-Secret，并追加 `--set imagePullSecret.existingSecret=<pull-secret-name>`。
 
 ### `imagePullSecret`
 
@@ -220,14 +236,14 @@ helm package .
 testudo-chart-1.0.0.tgz
 ```
 
-该包属于发布产物，不提交到源码分支；GitHub Pages 分支可以保存 `.tgz` 和 `index.yaml`。
+该包属于发布产物，不提交到源码分支；发布工作流会把 `.tgz`、`index.yaml` 和 `values*.yaml` 上传为 GitHub Release assets。
 
-## 6. GitHub Pages 托管建议
+## 6. GitHub Releases 托管
 
-推荐使用如下分支布局：
+推荐使用如下布局：
 
 - `main`: 保存 Chart 源码
-- `gh-pages`: 保存 `index.yaml` 和 Chart 包
+- release tag `helm-repo`: 保存 `index.yaml`、Chart 包和 `values*.yaml`
 
 本仓库已包含 GitHub Actions 工作流：
 
@@ -240,24 +256,17 @@ testudo-chart-1.0.0.tgz
 1. `helm lint .`
 2. `helm package .`
 3. 生成 Helm repo `index.yaml`
-4. 将 `index.yaml` 和 `testudo-chart-1.0.0.tgz` 发布到 `gh-pages` 分支
-
-GitHub 仓库侧需要在 `Settings -> Pages` 中选择：
-
-```text
-Source: Deploy from a branch
-Branch: gh-pages
-Folder: /
-```
+4. 将 `index.yaml`、`testudo-chart-1.0.0.tgz` 和 `values*.yaml` 上传到 `helm-repo` release
 
 如需手动发布，可使用以下命令：
 
 ```bash
 helm package .
-mkdir -p /tmp/testudo-chart-pages
-cp testudo-chart-1.0.0.tgz /tmp/testudo-chart-pages/
-helm repo index /tmp/testudo-chart-pages \
-  --url https://softcdata.github.io/testudo-chart
+mkdir -p /tmp/testudo-chart-release
+cp testudo-chart-1.0.0.tgz /tmp/testudo-chart-release/
+cp values*.yaml /tmp/testudo-chart-release/
+helm repo index /tmp/testudo-chart-release \
+  --url https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
 ```
 
-将 `/tmp/testudo-chart-pages` 的内容推送到 `gh-pages` 分支后，即可通过 `helm repo add` 使用。
+将 `/tmp/testudo-chart-release/index.yaml`、Chart 包和 `values*.yaml` 上传到 `helm-repo` release 后，即可通过 `helm repo add` 使用。

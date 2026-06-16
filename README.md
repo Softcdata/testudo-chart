@@ -42,12 +42,21 @@ Prerequisites:
 Install the control plane with the `testudo-chart` Helm chart:
 
 ```bash
-helm repo add testudo https://softcdata.github.io/testudo-chart
+helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
 helm repo update
 
 helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace
+```
+
+The default install pulls public images from Docker Hub. For faster pulls in China, use the Aliyun ACR public image profile:
+
+```bash
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace \
+  -f https://github.com/Softcdata/testudo-chart/releases/download/helm-repo/values-aliyun.yaml
 ```
 
 Open the console:

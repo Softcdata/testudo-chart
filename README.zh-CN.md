@@ -42,12 +42,21 @@ GitHub 是本项目事实源。如提供 Gitee 仓库，Gitee 用于国内访问
 通过 `testudo-chart` Helm Chart 安装控制面：
 
 ```bash
-helm repo add testudo https://softcdata.github.io/testudo-chart
+helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
 helm repo update
 
 helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace
+```
+
+默认安装会从 Docker Hub 拉取公共镜像。国内网络可以使用阿里云 ACR 公共镜像配置加速拉取：
+
+```bash
+helm upgrade --install testudo testudo/testudo-chart \
+  -n disaster-system \
+  --create-namespace \
+  -f https://github.com/Softcdata/testudo-chart/releases/download/helm-repo/values-aliyun.yaml
 ```
 
 打开控制台：
