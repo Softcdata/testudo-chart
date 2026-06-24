@@ -42,21 +42,12 @@ GitHub 是本项目事实源。如提供 Gitee 仓库，Gitee 用于国内访问
 通过 `testudo-chart` Helm Chart 安装控制面：
 
 ```bash
-helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
+helm repo add testudo https://softcdata.github.io/testudo-chart
 helm repo update
 
 helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace
-```
-
-默认安装会从 Docker Hub 拉取公共镜像。国内网络可以使用阿里云 ACR 公共镜像配置加速拉取：
-
-```bash
-helm upgrade --install testudo testudo/testudo-chart \
-  -n disaster-system \
-  --create-namespace \
-  -f https://github.com/Softcdata/testudo-chart/releases/download/helm-repo/values-aliyun.yaml
 ```
 
 打开控制台：
@@ -76,7 +67,7 @@ http://<NodeIP>:30087
 
 ## 系统架构
 
-![Testudo 系统架构](static/img/diagrams/1.png)
+![Testudo 系统架构](static/img/diagrams/architecture.png)
 
 Testudo 整体分为五层：
 
@@ -291,7 +282,15 @@ cp .env.example .env.dev
 pnpm dev
 ```
 
-浏览器访问 `http://localhost:9009`（或 `.env` 中配置的端口）。本地联调时将开发代理指向正在运行的 `testudo-server`，例如 `http://127.0.0.1:8080`。
+浏览器访问 `http://localhost:9009`（或 `.env` 中配置的端口）。
+
+**网络约定**：浏览器始终请求同源路径（`/apis/*`、`/login`、`/refresh_token`），`axios` 的 `baseURL` 留空。本地开发由 Vite 代理转发（见 `build/proxy.ts`）；生产由 Nginx 反代（见 `nginx.conf.template`）。只需在 `.env.dev` 配置一项即可：
+
+```json
+[["/apis","http://127.0.0.1:8080"]]
+```
+
+`/login` 与 `/refresh_token` 会自动代理到同一后端。
 
 #### 常用脚本
 
@@ -312,10 +311,12 @@ pnpm dev
 
 | 变量 | 说明 |
 | --- | --- |
-| `VITE_BASE_URL` | 后端或网关地址 |
-| `VITE_URL_PROXYS` | 开发代理（JSON 数组），如 `[["/apis","http://127.0.0.1:8080"]]` |
-| `VITE_API_PREFIX` | API 路径前缀（默认 `/apis`） |
+| `VITE_HTTP_PROXY` | 是否启用开发代理（根 `.env` 或 `.env.dev`） |
+| `VITE_URL_PROXYS` | 开发代理目标，如 `[["/apis","http://127.0.0.1:8080"]]` |
+| `VITE_BASE_URL` | 可选；留空走同源反代。仅直连后端调试时填写绝对地址 |
+| `VITE_API_PREFIX` | 网关前缀（默认 `/apis`），接口 path 以此开头 |
 | `VITE_ROUTER_HISTORY_MODE` | `hash` 或 `history` |
+| `VITE_OUTPUT_DIR` | 构建输出目录（`build:prod` 默认为 `dist-prod`） |
 
 #### 目录结构
 
@@ -369,8 +370,6 @@ helm upgrade --install testudo ./testudo-chart-1.0.0.tgz \
   -n disaster-system \
   --create-namespace
 ```
-
-注意：Helm 不会在 `helm upgrade` 时更新已经存在的 `crds/` 目录 CRD。如果本次发布只更新 CRD，请从线上 Chart 包中取出 `crds/operator-crds.yaml` 和 `crds/velero-crds.yaml`，执行 `kubectl apply --server-side --force-conflicts -f ...` 并等待 CRD `Established=True`。如果同时更新 CRD 和 runtime 资源，先 apply CRD，再执行 `helm upgrade`。
 
 私有镜像仓库建议复用已有的 `kubernetes.io/dockerconfigjson` Secret，也可以显式创建：
 

@@ -42,21 +42,12 @@ Prerequisites:
 Install the control plane with the `testudo-chart` Helm chart:
 
 ```bash
-helm repo add testudo https://github.com/Softcdata/testudo-chart/releases/download/helm-repo
+helm repo add testudo https://softcdata.github.io/testudo-chart
 helm repo update
 
 helm upgrade --install testudo testudo/testudo-chart \
   -n disaster-system \
   --create-namespace
-```
-
-The default install pulls public images from Docker Hub. For faster pulls in China, use the Aliyun ACR public image profile:
-
-```bash
-helm upgrade --install testudo testudo/testudo-chart \
-  -n disaster-system \
-  --create-namespace \
-  -f https://github.com/Softcdata/testudo-chart/releases/download/helm-repo/values-aliyun.yaml
 ```
 
 Open the console:
@@ -76,7 +67,7 @@ Read the full [Installation Guide](https://testudo.softcdata.com/en/docs/getting
 
 ## Architecture
 
-![Testudo architecture](static/img/diagrams/1.png)
+![Testudo architecture](static/img/diagrams/architecture.png)
 
 Testudo is organized around five layers:
 
@@ -291,7 +282,15 @@ cp .env.example .env.dev
 pnpm dev
 ```
 
-Open `http://localhost:9009` (or the port configured in `.env`). Point the dev proxy at a running `testudo-server`, for example `http://127.0.0.1:8080`.
+Open `http://localhost:9009` (or the port configured in `.env`).
+
+**Network model**: the browser always calls same-origin paths (`/apis/*`, `/login`, `/refresh_token`) with an empty axios `baseURL`. Dev uses the Vite proxy (`build/proxy.ts`); production uses Nginx (`nginx.conf.template`). Configure one entry in `.env.dev`:
+
+```json
+[["/apis","http://127.0.0.1:8080"]]
+```
+
+`/login` and `/refresh_token` are proxied to the same backend automatically.
 
 #### Scripts
 
@@ -312,10 +311,12 @@ Copy `.env.example` to `.env.dev`, `.env.test`, `.env.staging`, or `.env.prod` a
 
 | Variable | Description |
 | --- | --- |
-| `VITE_BASE_URL` | API or gateway origin |
-| `VITE_URL_PROXYS` | Dev proxy targets (JSON array), e.g. `[["/apis","http://127.0.0.1:8080"]]` |
-| `VITE_API_PREFIX` | API path prefix (default `/apis`) |
+| `VITE_HTTP_PROXY` | Enable Vite dev proxy |
+| `VITE_URL_PROXYS` | Dev proxy targets, e.g. `[["/apis","http://127.0.0.1:8080"]]` |
+| `VITE_BASE_URL` | Optional; leave empty for same-origin proxy. Absolute URL only for direct backend debugging |
+| `VITE_API_PREFIX` | Gateway prefix (default `/apis`) |
 | `VITE_ROUTER_HISTORY_MODE` | `hash` or `history` |
+| `VITE_OUTPUT_DIR` | Build output directory (`dist-prod` for `build:prod`) |
 
 
 #### Project structure
@@ -370,8 +371,6 @@ helm upgrade --install testudo ./testudo-chart-1.0.0.tgz \
   -n disaster-system \
   --create-namespace
 ```
-
-Note: Helm does not update existing CRDs from the chart `crds/` directory during `helm upgrade`. If a release changes only CRDs, extract `crds/operator-crds.yaml` and `crds/velero-crds.yaml` from the online chart package, run `kubectl apply --server-side --force-conflicts -f ...`, and wait until the CRDs are `Established=True`. If a release changes both CRDs and runtime resources, apply CRDs first and then run `helm upgrade`.
 
 Use an existing `kubernetes.io/dockerconfigjson` Secret for private image registries, or create one explicitly:
 
