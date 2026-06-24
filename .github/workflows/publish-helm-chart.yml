@@ -10,6 +10,7 @@ on:
       - values*.yaml
       - templates/**
       - crds/**
+      - CHANGELOG.md
       - DEPLOYMENT.md
       - README.md
       - LICENSE
@@ -71,7 +72,23 @@ jobs:
           printf 'chart_version=%s\n' "${chart_version}" >> "${GITHUB_ENV}"
           printf 'chart_package=%s\n' "${chart_package}" >> "${GITHUB_ENV}"
 
-      - name: Publish to GitHub Releases
+          notes_file="public/release-notes.md"
+          if [ -f CHANGELOG.md ]; then
+            awk -v version="${chart_version}" '
+              $0 ~ "^##[[:space:]]+" version "([[:space:]]|$|-)" { capture = 1; next }
+              capture && $0 ~ "^##[[:space:]]+" { exit }
+              capture { print }
+            ' CHANGELOG.md > "${notes_file}"
+          fi
+          if [ ! -s "${notes_file}" ]; then
+            {
+              printf 'Helm chart release %s.\n\n' "${chart_version}"
+              printf -- '- Chart package: %s\n' "${chart_package}"
+              printf -- '- Stable Helm repository release: %s\n' "${HELM_REPO_RELEASE_TAG}"
+            } > "${notes_file}"
+          fi
+
+      - name: Publish Helm repository release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,3 +109,30 @@ jobs:
           fi
 
           gh release upload "${HELM_REPO_RELEASE_TAG}" "${assets[@]}" --clobber
+
+      - name: Publish version release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version_release_tag="${chart_version}"
+          version_assets=("public/${chart_package}" "public/index.yaml")
+          if compgen -G "public/values*.yaml" >/dev/null; then
+            while IFS= read -r values_file; do
+              version_assets+=("${values_file}")
+            done < <(find public -maxdepth 1 -type f -name 'values*.yaml' | sort)
+          fi
+
+          if gh release view "${version_release_tag}" >/dev/null 2>&1; then
+            gh release edit "${version_release_tag}" \
+              --title "testudo-chart ${chart_version}" \
+              --notes-file public/release-notes.md
+            gh release upload "${version_release_tag}" "${version_assets[@]}" --clobber
+          else
+            gh release create "${version_release_tag}" "${version_assets[@]}" \
+              --target "${GITHUB_SHA}" \
+              --title "testudo-chart ${chart_version}" \
+              --notes-file public/release-notes.md
+          fi
