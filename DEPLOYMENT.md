@@ -8,9 +8,9 @@
 
 默认镜像使用 Docker Hub 公共仓库：
 
-- `docker.io/softcdata/testudo-operator:v1.0.0`
-- `docker.io/softcdata/testudo-server:v1.0.0`
-- `docker.io/softcdata/testudo-web:v1.0.0`
+- `docker.io/softcdata/testudo-operator:1.0.1`
+- `docker.io/softcdata/testudo-server:1.0.1`
+- `docker.io/softcdata/testudo-web:1.0.1`
 
 ## 1. 前置条件
 
@@ -63,7 +63,7 @@ Helm 对 Chart `crds/` 目录有特殊处理：安装时会创建 CRD，但 `hel
 
 ```bash
 helm repo update
-helm pull testudo/testudo-chart --version 1.0.0 --untar --untardir /tmp/testudo-chart-crds
+helm pull testudo/testudo-chart --version 1.0.1 --untar --untardir /tmp/testudo-chart-crds
 
 kubectl apply --server-side --force-conflicts \
   -f /tmp/testudo-chart-crds/testudo-chart/crds/operator-crds.yaml
@@ -140,13 +140,13 @@ helm upgrade --install testudo testudo/testudo-chart \
 images:
   operator:
     repository: registry.example.com/softcdata/testudo-operator
-    tag: v1.0.0
+    tag: 1.0.1
   server:
     repository: registry.example.com/softcdata/testudo-server
-    tag: v1.0.0
+    tag: 1.0.1
   web:
     repository: registry.example.com/softcdata/testudo-web
-    tag: v1.0.0
+    tag: 1.0.1
 ```
 
 本仓库内置了两份镜像源切换文件：
@@ -268,7 +268,7 @@ helm package .
 打包后会生成：
 
 ```text
-testudo-chart-1.0.0.tgz
+testudo-chart-1.0.1.tgz
 ```
 
 该包属于发布产物，不提交到源码分支；发布工作流会把 `.tgz`、`index.yaml` 和 `values*.yaml` 上传为 GitHub Release assets。
@@ -291,14 +291,14 @@ testudo-chart-1.0.0.tgz
 1. `helm lint .`
 2. `helm package .`
 3. 生成 Helm repo `index.yaml`
-4. 将 `index.yaml`、`testudo-chart-1.0.0.tgz` 和 `values*.yaml` 上传到 `helm-repo` release
+4. 将 `index.yaml`、`testudo-chart-1.0.1.tgz` 和 `values*.yaml` 上传到 `helm-repo` release
 
 如需手动发布，可使用以下命令：
 
 ```bash
 helm package .
 mkdir -p /tmp/testudo-chart-release
-cp testudo-chart-1.0.0.tgz /tmp/testudo-chart-release/
+cp testudo-chart-1.0.1.tgz /tmp/testudo-chart-release/
 cp values*.yaml /tmp/testudo-chart-release/
 helm repo index /tmp/testudo-chart-release \
   --url https://github.com/Softcdata/testudo-chart/releases/download/helm-repo

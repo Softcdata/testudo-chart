@@ -6,13 +6,13 @@
 images:
   operator:
     repository: crpi-ftcmc8yukyvoj8qy.cn-hangzhou.personal.cr.aliyuncs.com/softcdata/testudo-operator
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   server:
     repository: crpi-ftcmc8yukyvoj8qy.cn-hangzhou.personal.cr.aliyuncs.com/softcdata/testudo-server
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   web:
     repository: crpi-ftcmc8yukyvoj8qy.cn-hangzhou.personal.cr.aliyuncs.com/softcdata/testudo-web
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent

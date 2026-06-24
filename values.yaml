@@ -17,15 +17,15 @@ imagePullSecret:
 images:
   operator:
     repository: docker.io/softcdata/testudo-operator
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   server:
     repository: docker.io/softcdata/testudo-server
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   web:
     repository: docker.io/softcdata/testudo-web
-    tag: v1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
 
 operator:
